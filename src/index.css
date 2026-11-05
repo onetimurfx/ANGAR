@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/fraunces";
+
+@theme {
+  --color-coral: #d94b59;
+  --color-coral-deep: #bf3a48;
+  --color-coral-soft: #fbe3e5;
+  --color-ivory: #f7f5f0;
+  --color-navy: #172b3a;
+  --color-navy-soft: #3b4f5e;
+  --color-beige: #d9bfa3;
+  --color-beige-soft: #efe4d6;
+  --color-mist: #e6e3dc;
+  --color-stone: #8a8f94;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --safe-top: calc(env(safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-height: var(--tg-viewport-stable-height, 100dvh);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ivory);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  min-height: var(--app-height);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  font-weight: 600;
+}
+
+button { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2.5px solid var(--color-coral);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* ---- Liquid-glass surfaces: frosted, but opaque enough to keep text readable ---- */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 10px 30px -12px rgba(23, 43, 58, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.86);
+    -webkit-backdrop-filter: blur(26px) saturate(190%);
+    backdrop-filter: blur(26px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow:
+      0 18px 40px -14px rgba(23, 43, 58, 0.38),
+      0 2px 6px rgba(23, 43, 58, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .glass-chip {
+    background: rgba(255, 255, 255, 0.66);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-nav, .glass-chip { background: rgba(255, 255, 255, 0.96); }
+}
+
+.rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 4px 16px 18px;
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar { display: none; }
+.rail > * { scroll-snap-align: start; flex: none; }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

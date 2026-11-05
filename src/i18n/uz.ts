@@ -1,0 +1,71 @@
+/** Uzbek (Latin) is the primary language. Add ru.ts / en.ts with the same keys later. */
+export const uz = {
+  'nav.home': 'Asosiy',
+  'nav.catalog': 'Katalog',
+  'nav.quick': 'Tezkor buyurtma',
+  'nav.cart': 'Savatcha',
+  'nav.profile': 'Profil',
+  'nav.label': 'Asosiy navigatsiya',
+
+  'common.all': 'Barchasi',
+  'common.back': 'Orqaga',
+  'common.close': 'Yopish',
+  'common.sample': 'NAMUNA',
+  'common.new': 'YANGI',
+  'common.inStock': 'Omborda',
+  'common.outOfStock': 'Tugagan',
+  'common.pcs': 'dona',
+  'common.size': "O'lcham",
+  'common.color': 'Rang',
+
+  'home.search': 'Qidirish',
+  'home.notifications': 'Bildirishnomalar',
+  'home.notifications.empty': "Hozircha bildirishnoma yo'q",
+  'home.demo': "Bu namunaviy ko'rinish: mahsulotlar va narxlar haqiqiy emas.",
+  'home.newCollection': 'Yangi kolleksiya',
+  'home.original': 'AYNIMO Original',
+  'home.otherBrands': 'Boshqa brendlar',
+  'home.popular': 'Mashhur mahsulotlar',
+  'home.newArrivals': 'Yangi kelganlar',
+  'home.discounted': 'Chegirmadagi mahsulotlar',
+  'home.shoes': 'Poyabzal kolleksiyasi',
+  'home.clothing': 'Kiyim kolleksiyasi',
+  'home.style': 'Uslub ilhomi',
+  'home.styleSub': "To'liq komplektlar",
+  'home.recent': "Yaqinda ko'rilganlar",
+  'home.categories': 'Kategoriyalar',
+
+  'catalog.title': 'Katalog',
+  'catalog.search': 'Mahsulot nomi yoki brend',
+  'catalog.empty': 'Hech narsa topilmadi',
+  'catalog.emptyHint': "Boshqa kategoriya yoki so'zni sinab ko'ring.",
+  'catalog.found': 'ta mahsulot',
+
+  'product.similar': "O'xshash mahsulotlar",
+  'product.outfits': 'Mos komplektlar',
+  'product.notFound': 'Mahsulot topilmadi',
+  'product.soon': "Savatga qo'shish va Tezkor buyurtma keyingi bosqichlarda ishga tushadi.",
+  'outfit.total': 'Komplekt narxi',
+
+  'quick.title': 'Tezkor buyurtma',
+  'quick.soon': "Bu bo'lim 4-bosqichda ishga tushadi: mahsulot, o'lcham, rang va yetkazib berish manzilini kiritib, bir necha bosishda buyurtma berasiz.",
+  'quick.toCatalog': "Katalogni ko'rish",
+
+  'cart.title': 'Savatcha',
+  'cart.empty': "Savatchangiz bo'sh",
+  'cart.emptyHint': "Mahsulotlarni tanlang. Savatcha 4-bosqichda ishga tushadi.",
+  'cart.toCatalog': "Katalogga o'tish",
+
+  'profile.title': 'Profil',
+  'profile.preview': "Telegramdan tashqarida ochilgan (ko'rib chiqish rejimi).",
+  'profile.tgNote': "Telegram ma'lumotlari serverda tekshirilgunga qadar faqat ko'rsatish uchun.",
+  'profile.orders': 'Buyurtmalarim',
+  'profile.ordersEmpty': "Hozircha buyurtmalar yo'q",
+  'profile.support': "Qo'llab-quvvatlash",
+  'profile.supportEmpty': "Aloqa ma'lumotlari hali sozlanmagan.",
+
+  'notfound.title': 'Sahifa topilmadi',
+  'notfound.home': 'Asosiyga qaytish',
+} as const
+
+export type Key = keyof typeof uz
