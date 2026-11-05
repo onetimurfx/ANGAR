@@ -1,51 +1,46 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PackageSearch, Search } from 'lucide-react'
+import { ArrowUpDown, Check, PackageSearch, Search, SlidersHorizontal, X } from 'lucide-react'
 import { PageHeader, EmptyState } from '../components/ui'
 import { ProductCard } from '../components/ProductCard'
+import { BottomSheet } from '../components/BottomSheet'
+import { FilterSheet } from '../components/FilterSheet'
 import { activeProducts, brands, categories } from '../data/sample'
+import { EMPTY, SORTS, activeGroups, applyFilters, facets, parseFilters, serializeFilters, type FilterState } from '../lib/filters'
+import { formatUZS } from '../lib/format'
+import type { Key } from '../i18n/uz'
 import { t } from '../i18n'
-
-/** Phase 2 catalog: category chips, quick tags and text search. Full filters/sorting arrive in Phase 3. */
-const TAGS = [
-  { id: 'new', label: 'Yangi' },
-  { id: 'original', label: 'AYNIMO Original' },
-  { id: 'other', label: 'Boshqa brendlar' },
-  { id: 'popular', label: 'Mashhur' },
-  { id: 'discount', label: 'Chegirma' },
-]
 
 export function Catalog() {
   const [params, setParams] = useSearchParams()
-  const cat = params.get('cat') ?? 'all'
-  const tag = params.get('f') ?? ''
-  const q = params.get('q') ?? ''
+  const state = useMemo(() => parseFilters(params), [params])
   const input = useRef<HTMLInputElement>(null)
+  const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null)
+  const [draft, setDraft] = useState<FilterState>(state)
+  const all = useMemo(() => activeProducts(), [])
+  const { bounds } = useMemo(() => facets(), [])
 
   useEffect(() => {
     if (params.get('focus')) input.current?.focus()
   }, [params])
 
-  const set = (k: string, v: string) => {
-    const next = new URLSearchParams(params)
-    next.delete('focus')
-    if (v) next.set(k, v)
-    else next.delete(k)
-    setParams(next, { replace: true })
-  }
+  const commit = (next: FilterState) => setParams(serializeFilters(next), { replace: true })
+  const items = useMemo(() => applyFilters(all, state), [all, state])
+  const draftCount = useMemo(() => applyFilters(all, draft).length, [all, draft])
+  const groups = activeGroups(state)
 
-  let items = activeProducts()
-  if (cat !== 'all') items = items.filter((p) => p.categoryId === cat)
-  if (tag === 'new') items = items.filter((p) => p.isNew)
-  if (tag === 'original' || tag === 'other') items = items.filter((p) => p.type === tag)
-  if (tag === 'discount') items = items.filter((p) => p.oldPrice)
-  if (tag === 'popular') items = [...items].sort((a, b) => b.popularity - a.popularity)
-  const needle = q.trim().toLowerCase()
-  if (needle) {
-    items = items.filter(
-      (p) => p.name.toLowerCase().includes(needle) || (brands.find((b) => b.id === p.brandId)?.name.toLowerCase().includes(needle) ?? false),
-    )
-  }
+  // removable summary chips for every active filter
+  const chips: { key: string; label: string; clear: () => void }[] = []
+  if (state.cat !== 'all') chips.push({ key: 'cat', label: categories.find((c) => c.id === state.cat)?.name ?? '', clear: () => commit({ ...state, cat: 'all' }) })
+  if (state.tag) chips.push({ key: 'tag', label: t(`tag.${state.tag}` as Key), clear: () => commit({ ...state, tag: '' }) })
+  state.brands.forEach((b) => chips.push({ key: `b-${b}`, label: brands.find((x) => x.id === b)?.name ?? b, clear: () => commit({ ...state, brands: state.brands.filter((x) => x !== b) }) }))
+  state.sizes.forEach((s) => chips.push({ key: `s-${s}`, label: `${t('filter.size')} ${s}`, clear: () => commit({ ...state, sizes: state.sizes.filter((x) => x !== s) }) }))
+  state.colors.forEach((c) => chips.push({ key: `c-${c}`, label: c, clear: () => commit({ ...state, colors: state.colors.filter((x) => x !== c) }) }))
+  if (state.min !== null || state.max !== null)
+    chips.push({ key: 'price', label: `${formatUZS(state.min ?? bounds.min)} - ${formatUZS(state.max ?? bounds.max)}`, clear: () => commit({ ...state, min: null, max: null }) })
+  if (state.avail) chips.push({ key: 'avail', label: t('filter.availOnly'), clear: () => commit({ ...state, avail: false }) })
+
+  const clearAll = () => commit({ ...EMPTY, sort: state.sort, q: state.q })
 
   return (
     <div className="pb-36">
@@ -55,12 +50,17 @@ export function Catalog() {
           <Search className="size-[18px] text-stone" />
           <input
             ref={input}
-            value={q}
-            onChange={(e) => set('q', e.target.value)}
+            value={state.q}
+            onChange={(e) => commit({ ...state, q: e.target.value })}
             placeholder={t('catalog.search')}
             aria-label={t('home.search')}
             className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-stone"
           />
+          {state.q && (
+            <button type="button" aria-label={t('filter.clear')} onClick={() => commit({ ...state, q: '' })} className="grid size-6 place-items-center rounded-full bg-navy/10">
+              <X className="size-3.5" />
+            </button>
+          )}
         </label>
       </div>
 
@@ -69,40 +69,108 @@ export function Catalog() {
           <button
             key={c.id}
             type="button"
-            onClick={() => set('cat', c.id === 'all' ? '' : c.id)}
-            aria-pressed={cat === c.id}
-            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold ${cat === c.id ? 'bg-navy text-white' : 'glass'}`}
+            onClick={() => commit({ ...state, cat: c.id })}
+            aria-pressed={state.cat === c.id}
+            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold ${state.cat === c.id ? 'bg-navy text-white' : 'glass'}`}
           >
             {c.name}
           </button>
         ))}
       </div>
-      <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4">
-        {TAGS.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            onClick={() => set('f', tag === x.id ? '' : x.id)}
-            aria-pressed={tag === x.id}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold ${tag === x.id ? 'bg-coral text-white' : 'bg-coral-soft text-coral'}`}
-          >
-            {x.label}
-          </button>
-        ))}
+
+      <div className="mt-3 flex items-center gap-2 px-4">
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(state)
+            setSheet('filter')
+          }}
+          className="glass relative flex items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold"
+        >
+          <SlidersHorizontal className="size-4" />
+          {t('catalog.filter')}
+          {groups > 0 && (
+            <span data-testid="filter-badge" className="grid min-w-5 place-items-center rounded-full bg-coral px-1 text-[11px] font-extrabold leading-5 text-white">
+              {groups}
+            </span>
+          )}
+        </button>
+        <button type="button" onClick={() => setSheet('sort')} className="glass flex min-w-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold">
+          <ArrowUpDown className="size-4 shrink-0" />
+          <span className="truncate">{t(`sort.${state.sort}` as Key)}</span>
+        </button>
       </div>
 
-      <p className="mt-4 px-4 text-[12px] font-semibold text-stone">
+      {chips.length > 0 && (
+        <div className="no-scrollbar mt-3 flex items-center gap-2 overflow-x-auto px-4" aria-label={t('filter.title')}>
+          {chips.map((c) => (
+            <button key={c.key} type="button" onClick={c.clear} aria-label={`${c.label} ×`} className="flex shrink-0 items-center gap-1.5 rounded-full bg-coral-soft py-1.5 pl-3 pr-2 text-[12px] font-bold text-coral">
+              {c.label}
+              <X className="size-3.5" />
+            </button>
+          ))}
+          <button type="button" onClick={clearAll} className="shrink-0 px-1 text-[12px] font-bold text-navy-soft underline">
+            {t('catalog.clearAll')}
+          </button>
+        </div>
+      )}
+
+      <p data-testid="result-count" className="mt-4 px-4 text-[12px] font-semibold text-stone">
         {items.length} {t('catalog.found')}
       </p>
       {items.length === 0 ? (
-        <EmptyState icon={<PackageSearch className="size-7" />} title={t('catalog.empty')} hint={t('catalog.emptyHint')} />
+        <EmptyState
+          icon={<PackageSearch className="size-7" />}
+          title={t('catalog.empty')}
+          hint={t('catalog.emptyHint')}
+          action={
+            groups > 0 || state.q ? (
+              <button type="button" onClick={clearAll} className="rounded-full bg-coral px-6 py-3 text-sm font-bold text-white">
+                {t('catalog.clearAll')}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 px-4">
+        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-6 px-4">
           {items.map((p) => (
             <ProductCard key={p.id} product={p} grid />
           ))}
         </div>
       )}
+
+      <FilterSheet
+        open={sheet === 'filter'}
+        onClose={() => setSheet(null)}
+        draft={draft}
+        setDraft={setDraft}
+        resultCount={draftCount}
+        onApply={() => {
+          commit(draft)
+          setSheet(null)
+        }}
+      />
+
+      <BottomSheet open={sheet === 'sort'} onClose={() => setSheet(null)} title={t('sort.title')}>
+        <div role="radiogroup" aria-label={t('sort.title')} className="space-y-2 pb-4 pt-1">
+          {SORTS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={state.sort === s}
+              onClick={() => {
+                commit({ ...state, sort: s })
+                setSheet(null)
+              }}
+              className={`flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left text-[15px] font-semibold ${state.sort === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'}`}
+            >
+              {t(`sort.${s}` as Key)}
+              {state.sort === s && <Check className="size-5 text-coral" strokeWidth={3} />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   )
 }

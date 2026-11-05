@@ -19,9 +19,9 @@ export function OutfitCard({ outfit }: { outfit: Outfit }) {
       <div className="px-1.5 pb-1 pt-3">
         <h3 className="text-[17px]">{outfit.title}</h3>
         <p className="mt-0.5 text-[12px] text-navy-soft">{outfit.note}</p>
-        <p className="mt-2 flex items-baseline justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-stone">{t('outfit.total')}</span>
-          <span className="text-[15px] font-extrabold">{formatUZS(outfitTotal(outfit))}</span>
+        <p className="mt-2.5">
+          <span className="block text-[10.5px] font-semibold uppercase tracking-wider text-stone">{t('outfit.total')}</span>
+          <span className="block whitespace-nowrap text-[16px] font-extrabold tabular-nums">{formatUZS(outfitTotal(outfit))}</span>
         </p>
       </div>
     </Link>

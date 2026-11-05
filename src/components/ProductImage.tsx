@@ -96,12 +96,20 @@ const BACKDROPS = [
   ['#F3ECE1', '#E8DCCB'],
   ['#FBE9EA', '#F2D3D6'],
   ['#E9ECEE', '#D8DEE2'],
+  ['#F1EBDD', '#DCCFB8'],
+]
+
+const TRANSFORMS = [
+  undefined,
+  'translate(60 66) scale(1.12) translate(-60 -66)',
+  'translate(60 66) scale(0.92) translate(-60 -66)',
+  'translate(60 44) scale(1.75) translate(-60 -34)',
 ]
 
 interface Props {
   categoryId: Product['categoryId']
   color: string
-  /** 0-2: different backdrops stand in for a photo gallery */
+  /** 0-3: different backdrops/crops stand in for a photo gallery (3 = close-up detail) */
   view?: number
   className?: string
   label?: string
@@ -127,7 +135,7 @@ export function ProductImage({ categoryId, color, view = 0, className = '', labe
       </defs>
       <rect width="120" height="140" fill={`url(#${id}-bg)`} />
       <ellipse cx="60" cy="130" rx="34" ry="3.5" fill="rgba(23,43,58,0.12)" />
-      <g transform={view === 1 ? 'translate(60 66) scale(1.12) translate(-60 -66)' : view === 2 ? 'translate(60 66) scale(0.92) translate(-60 -66)' : undefined}>
+      <g transform={TRANSFORMS[view % 4]}>
         {GARMENTS[categoryId](color)}
       </g>
     </svg>

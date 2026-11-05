@@ -12,7 +12,7 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 | --- | --- | --- |
 | 1 | Project setup, design system | done |
 | 2 | Mini App shell, bottom navigation, homepage | done |
-| 3 | Catalog filters/sorting, product details | next |
+| 3 | Catalog filters/sorting, product details, cart state | done |
 | 4 | Quick Order, cart | planned |
 | 5 | Supabase database, storage | planned |
 | 6 | Admin dashboard, orders | planned |
@@ -22,12 +22,26 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 
 **Everything shown in the app is temporary sample data** (`src/data/sample.ts`): names, prices, stock and the vector product
 illustrations are placeholders and every product card is marked `NAMUNA`. There is **no backend yet**: nothing is saved
-on a server, and no order can be placed. Quick Order and the cart are explicit "coming in phase 4" screens.
+on a server, and no order can be placed. The cart (localStorage) and the Quick Order selection (sessionStorage) already work
+on the device, but the checkout / order form is an explicit "coming in phase 4" notice.
 
 ## Navigation
 
 Exactly five items: **ASOSIY · KATALOG · TEZKOR BUYURTMA · SAVATCHA · PROFIL**. Quick Order is the emphasised Coral Red
 centre button with a lightning icon. There is no favorites / wishlist feature anywhere in the project.
+
+## Phase 3 features
+
+- **Filters** (bottom sheet, live result count, state kept in the URL so reload/back/share keep it): category, type
+  (new / discount / AYNIMO Original / other brands), brand (multi), size (multi), colour (multi), price range, availability.
+  OR inside a group, AND across groups. Removable chips summarise active filters; unknown URL values are ignored safely.
+- **Sorting:** popularity, newest, lowest price, highest price.
+- **Product page:** swipeable 4-image gallery with synced thumbnails and a full-screen viewer (buttons, arrow keys, swipe),
+  colour and size pickers, quantity stepper capped at stock, stock status (in stock / "Oxirgi N dona qoldi" / sold out),
+  description and details, similar products, matching outfits, a glass purchase bar with the running total, **Add to cart**
+  and **Quick Order**. Both buttons validate size, stock and quantity first.
+- **Cart:** persisted in `localStorage`, merges identical variants, caps the total per product at stock, sanitises
+  corrupted/stale storage. The tab bar shows a live badge. **Quick Order** keeps its own selection and never touches the cart.
 
 ## Run
 
@@ -44,13 +58,16 @@ BackButton on inner screens.
 
 ## Tests
 
-`tests/e2e/smoke.cjs` drives the production build in Chrome at phone sizes (320–430 px): navigation order and Coral Red
-centre button, all homepage sections, search / filters, product and outfit pages, deep links, Telegram hash parameters,
-absence of favorites text, horizontal overflow, console errors and failed requests. It also writes screenshots to
-`tests/e2e/shots/` (git-ignored).
+- `npm test` – 33 unit tests (Vitest) for filtering, sorting, URL state, cart rules and storage sanitising.
+- `npm run test:e2e` – Chrome end-to-end suites against the production build at phone sizes (320–430 px):
+  - `smoke.cjs` (phases 1–2): navigation order and Coral Red centre button, homepage sections, routing, Telegram hash
+    parameters, overflow, console errors.
+  - `phase3.cjs`: every filter, sorting, gallery/lightbox, selection rules, stock limits, cart, Quick Order hand-off,
+    absence of favorites text, layout checks at 320/360/390/430 px. Screenshots go to `tests/e2e/shots/` (git-ignored).
 
 ```bash
-npm run build && npm run test:e2e     # uses /usr/bin/google-chrome, or set CHROME_PATH
+npm run build && npm test && npm run test:e2e     # uses /usr/bin/google-chrome, or set CHROME_PATH
+AYN_BASE=http://127.0.0.1:4173/AYNIMO/ npm run test:e2e   # against a sub-path build (VITE_BASE=/AYNIMO/)
 ```
 
 ## Design system

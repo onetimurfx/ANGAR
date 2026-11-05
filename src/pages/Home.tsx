@@ -71,7 +71,7 @@ export function Home() {
         <ProductRail items={all.filter((p) => p.type === 'other').slice(0, 8)} />
       </Section>
 
-      <Section title={t('home.popular')} to="/katalog?f=popular">
+      <Section title={t('home.popular')} to="/katalog?sort=popular">
         <ProductRail items={popular} />
       </Section>
 

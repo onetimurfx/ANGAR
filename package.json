@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "test:e2e": "node tests/e2e/smoke.cjs"
+    "test:e2e": "node tests/e2e/run-all.cjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
@@ -28,6 +29,7 @@
     "playwright-core": "^1.64.1",
     "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
   }
 }

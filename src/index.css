@@ -23,35 +23,36 @@
   --app-height: var(--tg-viewport-stable-height, 100dvh);
 }
 
-html {
-  -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
-}
+/* Element defaults live in @layer base so Tailwind utilities (text-white, font-extrabold, leading-*) can override them. */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
 
-body {
-  margin: 0;
-  background: var(--color-ivory);
-  color: var(--color-navy);
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
-  min-height: var(--app-height);
-}
+  body {
+    margin: 0;
+    background: var(--color-ivory);
+    color: var(--color-navy);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    min-height: var(--app-height);
+  }
 
-h1, h2, h3 {
-  font-family: var(--font-display);
-  letter-spacing: -0.015em;
-  line-height: 1.12;
-  font-weight: 600;
-}
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.12;
+    font-weight: 600;
+  }
 
-button { font: inherit; color: inherit; }
-
-:focus-visible {
-  outline: 2.5px solid var(--color-coral);
-  outline-offset: 2px;
-  border-radius: 10px;
+  :focus-visible {
+    outline: 2.5px solid var(--color-coral);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
 }
 
 /* ---- Liquid-glass surfaces: frosted, but opaque enough to keep text readable ---- */

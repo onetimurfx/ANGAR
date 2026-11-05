@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Grid2x2, House, ShoppingBag, UserRound, Zap, type LucideIcon } from 'lucide-react'
 import { t } from '../i18n'
 import { haptic } from '../lib/telegram'
+import { useCart } from '../lib/cart'
 import type { Key } from '../i18n/uz'
 
 /** Exactly five items; the center one is Quick Order. */
@@ -15,13 +16,14 @@ const ITEMS: { to: string; key: Key; icon: LucideIcon; end?: boolean; center?: b
 ]
 
 export function BottomNav() {
+  const { count } = useCart()
   return (
     <nav
       aria-label={t('nav.label')}
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3"
       style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
     >
-      <ul className="glass-nav relative grid w-full max-w-[440px] grid-cols-5 items-end rounded-[30px] px-1.5 pb-1.5 pt-1.5">
+      <ul className="glass-nav relative grid w-full max-w-[440px] grid-cols-[1fr_1fr_1.18fr_1fr_1fr] items-end rounded-[30px] px-1 pb-1.5 pt-1.5">
         {ITEMS.map(({ to, key, icon: Icon, end, center }) => (
           <li key={to} className="flex justify-center">
             <NavLink
@@ -40,7 +42,7 @@ export function BottomNav() {
                     >
                       <Zap className="size-[26px]" fill="currentColor" strokeWidth={1.5} />
                     </motion.span>
-                    <span className="text-center text-[9.5px] font-extrabold uppercase leading-[1.05] tracking-wide text-coral">
+                    <span className="text-center text-[9.5px] font-extrabold uppercase leading-[1.05] tracking-wide text-coral max-[359px]:text-[8.5px] max-[359px]:tracking-normal">
                       {t(key)
                         .split(' ')
                         .map((w) => (
@@ -59,9 +61,23 @@ export function BottomNav() {
                         transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                       />
                     )}
-                    <Icon className={`relative size-[22px] ${isActive ? 'text-coral' : 'text-navy-soft'}`} strokeWidth={isActive ? 2.4 : 1.9} />
+                    <span className="relative">
+                      <Icon className={`size-[22px] ${isActive ? 'text-coral' : 'text-navy-soft'}`} strokeWidth={isActive ? 2.4 : 1.9} />
+                      {to === '/savatcha' && count > 0 && (
+                        <motion.span
+                          key={count}
+                          initial={{ scale: 1.5 }}
+                          animate={{ scale: 1 }}
+                          data-testid="nav-cart-badge"
+                          aria-label={`${count}`}
+                          className="absolute -right-2.5 -top-2 grid min-w-[17px] place-items-center rounded-full bg-coral px-1 text-[10px] font-extrabold leading-[17px] text-white"
+                        >
+                          {count}
+                        </motion.span>
+                      )}
+                    </span>
                     <span
-                      className={`relative text-[9.5px] font-bold uppercase leading-none tracking-wide ${isActive ? 'text-navy' : 'text-navy-soft'}`}
+                      className={`relative text-[9.5px] font-bold uppercase leading-none tracking-wide max-[359px]:text-[8.5px] max-[359px]:tracking-normal ${isActive ? 'text-navy' : 'text-navy-soft'}`}
                     >
                       {t(key)}
                     </span>

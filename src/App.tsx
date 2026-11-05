@@ -11,6 +11,8 @@ import { Outfit } from './pages/Outfit'
 import { Cart, QuickOrder } from './pages/Soon'
 import { Profile } from './pages/Profile'
 import { useBackButton } from './lib/telegram'
+import { CartProvider } from './lib/cart'
+import { ToastProvider } from './lib/toast'
 import { Compass } from 'lucide-react'
 import { t } from './i18n'
 
@@ -45,7 +47,12 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
+  // the product screen swaps the tab bar for its own purchase bar (price + add to cart + quick order)
+  const showNav = !location.pathname.startsWith('/mahsulot/')
+
   return (
+    <CartProvider>
+    <ToastProvider>
     <div className="mx-auto min-h-[var(--app-height)] max-w-[520px]">
       <AnimatePresence mode="wait" initial={false}>
         <motion.main
@@ -67,7 +74,9 @@ export default function App() {
           </Routes>
         </motion.main>
       </AnimatePresence>
-      <BottomNav />
+      {showNav && <BottomNav />}
     </div>
+    </ToastProvider>
+    </CartProvider>
   )
 }

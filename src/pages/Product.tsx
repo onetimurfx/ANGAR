@@ -1,28 +1,53 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { PackageX } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { PackageX, ShoppingBag, Zap } from 'lucide-react'
 import { PageHeader, EmptyState, Section, primaryBtn } from '../components/ui'
-import { ProductImage } from '../components/ProductImage'
+import { Gallery } from '../components/Gallery'
 import { ProductRail } from '../components/ProductCard'
 import { OutfitCard } from '../components/OutfitCard'
-import { activeProducts, getBrand, getProduct, outfits } from '../data/sample'
+import { QtyStepper } from '../components/QtyStepper'
+import { activeProducts, categories, getBrand, getProduct, outfits } from '../data/sample'
 import { discountPercent, formatUZS } from '../lib/format'
 import { pushRecent } from '../lib/recent'
+import { useCart } from '../lib/cart'
+import { useToast } from '../lib/toast'
+import { haptic } from '../lib/telegram'
 import { t } from '../i18n'
 
-/** Phase 2 detail view (read-only). Variant validation, cart and Quick Order buttons arrive in Phases 3-4. */
+export function CartLink() {
+  const { count } = useCart()
+  return (
+    <Link to="/savatcha" aria-label={t('nav.cart')} data-testid="header-cart" className="glass relative grid size-10 place-items-center rounded-full">
+      <ShoppingBag className="size-[19px]" />
+      {count > 0 && (
+        <span data-testid="header-cart-badge" className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-coral px-1 text-[10px] font-extrabold leading-[18px] text-white">
+          {count}
+        </span>
+      )}
+    </Link>
+  )
+}
+
 export function Product() {
   const { id = '' } = useParams()
   const product = getProduct(id)
-  const [view, setView] = useState(0)
-  const [color, setColor] = useState(0)
+  const navigate = useNavigate()
+  const cart = useCart()
+  const toast = useToast()
+
+  const [colorIdx, setColorIdx] = useState(0)
   const [size, setSize] = useState<string | null>(null)
+  const [qty, setQty] = useState(1)
+  const [sizeError, setSizeError] = useState(false)
+  const sizeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (product) pushRecent(product.id)
-    setView(0)
-    setColor(0)
-    setSize(null)
+    setColorIdx(0)
+    setSize(product && product.sizes.length === 1 ? product.sizes[0] : null)
+    setQty(1)
+    setSizeError(false)
   }, [product])
 
   if (!product || !product.active) {
@@ -42,80 +67,164 @@ export function Product() {
     )
   }
 
+  const brand = getBrand(product.brandId)
   const off = discountPercent(product.price, product.oldPrice)
+  const out = product.stock <= 0
+  const low = !out && product.stock <= 5
+  const color = product.colors[colorIdx]
   const similar = activeProducts().filter((x) => x.categoryId === product.categoryId && x.id !== product.id)
   const matching = outfits.filter((o) => o.productIds.includes(product.id))
-  const activeColor = product.colors[color]
+  const inCart = cart.qtyOf(product.id)
+
+  /** Shared validation for both buttons: variant chosen, stock available. */
+  const validate = (): { size: string } | null => {
+    if (out) {
+      toast.show(t('product.unavailable'), { tone: 'warn' })
+      return null
+    }
+    if (!size) {
+      setSizeError(true)
+      sizeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      toast.show(t('product.chooseSize'), { tone: 'warn' })
+      return null
+    }
+    if (qty < 1 || qty > product.stock) {
+      toast.show(t('product.maxStock', { n: product.stock }), { tone: 'warn' })
+      return null
+    }
+    return { size }
+  }
+
+  const addToCart = () => {
+    const v = validate()
+    if (!v) return
+    const res = cart.add({ productId: product.id, size: v.size, color: color.name, qty })
+    if (!res.ok) {
+      toast.show(res.max > 0 ? `${t('product.maxStock', { n: product.stock })} (${inCart})` : t('product.cartFull'), { tone: 'warn' })
+      return
+    }
+    haptic()
+    setQty(1)
+    toast.show(t('product.added'), { action: { label: t('product.viewCart'), to: '/savatcha' } })
+  }
+
+  const quickOrder = () => {
+    const v = validate()
+    if (!v) return
+    cart.setQuick({ productId: product.id, size: v.size, color: color.name, qty })
+    haptic()
+    navigate('/tezkor-buyurtma')
+  }
+
+  const kindLabel = product.type === 'original' ? t('product.original') : t('product.otherBrand')
+  const rows: [string, string][] = [
+    [t('product.brand'), brand?.name ?? ''],
+    [t('product.kind'), kindLabel],
+    [t('product.category'), categories.find((c) => c.id === product.categoryId)?.name ?? ''],
+    [t('product.colors'), product.colors.map((c) => c.name).join(', ')],
+    [t('product.sizes'), product.sizes.join(', ')],
+  ]
 
   return (
-    <div className="pb-36">
-      <PageHeader title={getBrand(product.brandId)?.name ?? ''} />
+    <div className="pb-48">
+      <PageHeader title={brand?.name ?? ''} right={<CartLink />} />
       <div className="px-4">
-        <div className="relative aspect-[6/7] overflow-hidden rounded-[30px] bg-white shadow-[0_18px_40px_-22px_rgba(23,43,58,0.6)]">
-          <ProductImage categoryId={product.categoryId} color={activeColor.hex} view={view} className="size-full" label={product.name} />
-          <span className="glass-chip absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider text-navy-soft">{t('common.sample')}</span>
-        </div>
-        <div className="mt-3 flex gap-2">
-          {[0, 1, 2].map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              aria-label={`${v + 1}`}
-              aria-pressed={view === v}
-              className={`size-16 overflow-hidden rounded-2xl ${view === v ? 'ring-2 ring-coral ring-offset-2 ring-offset-ivory' : 'opacity-80'}`}
-            >
-              <ProductImage categoryId={product.categoryId} color={activeColor.hex} view={v} className="size-full" />
-            </button>
-          ))}
+        <Gallery categoryId={product.categoryId} color={color.hex} name={product.name} />
+
+        <div className="mt-6 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone">{kindLabel}</p>
+            <h1 className="mt-1 text-[27px]">{product.name}</h1>
+          </div>
+          {product.isNew && <span className="mt-1 shrink-0 rounded-full bg-navy px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-white">{t('common.new')}</span>}
         </div>
 
-        <h1 className="mt-5 text-[26px]">{product.name}</h1>
-        <p className="mt-2 flex items-baseline gap-2.5">
-          <span className="text-[24px] font-extrabold">{formatUZS(product.price)}</span>
-          {product.oldPrice && <span className="text-sm text-stone line-through">{formatUZS(product.oldPrice)}</span>}
-          {off > 0 && <span className="rounded-full bg-coral px-2 py-0.5 text-[11px] font-bold text-white">-{off}%</span>}
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          <span className="text-[26px] font-extrabold tabular-nums">{formatUZS(product.price)}</span>
+          {product.oldPrice && <span className="text-[15px] text-stone line-through">{formatUZS(product.oldPrice)}</span>}
+          {off > 0 && <span className="rounded-full bg-coral px-2.5 py-0.5 text-[12px] font-extrabold text-white">-{off}%</span>}
         </p>
-        <p className={`mt-1 text-[13px] font-semibold ${product.stock > 0 ? 'text-[#4f6a3c]' : 'text-coral'}`}>
-          {product.stock > 0 ? `${t('common.inStock')}: ${product.stock} ${t('common.pcs')}` : t('common.outOfStock')}
+
+        <p data-testid="stock-status" className={`mt-2 flex items-center gap-2 text-[13px] font-bold ${out ? 'text-coral' : low ? 'text-[#b5651d]' : 'text-[#4f6a3c]'}`}>
+          <span className={`size-2 rounded-full ${out ? 'bg-coral' : low ? 'bg-[#e0922f]' : 'bg-[#6f9a52]'}`} />
+          {out ? t('common.outOfStock') : low ? t('product.lowStock', { n: product.stock }) : `${t('common.inStock')}: ${product.stock} ${t('common.pcs')}`}
         </p>
-        <p className="mt-4 text-[14.5px] leading-relaxed text-navy-soft">{product.description}</p>
 
-        <h2 className="mb-2 mt-6 text-[15px] font-bold" style={{ fontFamily: 'var(--font-sans)' }}>
-          {t('common.color')}: <span className="font-medium text-navy-soft">{activeColor.name}</span>
-        </h2>
-        <div className="flex gap-3">
-          {product.colors.map((c, i) => (
-            <button
-              key={c.name}
-              type="button"
-              aria-label={c.name}
-              aria-pressed={color === i}
-              onClick={() => setColor(i)}
-              className={`size-9 rounded-full border border-navy/15 ${color === i ? 'ring-2 ring-coral ring-offset-2 ring-offset-ivory' : ''}`}
-              style={{ background: c.hex }}
-            />
-          ))}
-        </div>
+        <div className="glass mt-5 rounded-[26px] p-4">
+          <h2 className="text-[13px] font-extrabold uppercase tracking-wider text-stone" style={{ fontFamily: 'var(--font-sans)' }}>
+            {t('common.color')}: <span className="text-navy normal-case tracking-normal">{color.name}</span>
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {product.colors.map((c, i) => (
+              <button
+                key={c.name}
+                type="button"
+                aria-label={c.name}
+                aria-pressed={colorIdx === i}
+                onClick={() => setColorIdx(i)}
+                className={`size-10 rounded-full border border-navy/15 transition active:scale-90 ${colorIdx === i ? 'ring-2 ring-coral ring-offset-2 ring-offset-white' : ''}`}
+                style={{ background: c.hex }}
+              />
+            ))}
+          </div>
 
-        <h2 className="mb-2 mt-5 text-[15px] font-bold" style={{ fontFamily: 'var(--font-sans)' }}>
-          {t('common.size')}
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {product.sizes.map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={size === s}
-              onClick={() => setSize(s)}
-              className={`min-w-12 rounded-2xl px-3.5 py-2 text-sm font-bold ${size === s ? 'bg-navy text-white' : 'glass'}`}
+          <div ref={sizeRef} className="mt-5">
+            <h2 className="flex items-center justify-between text-[13px] font-extrabold uppercase tracking-wider text-stone" style={{ fontFamily: 'var(--font-sans)' }}>
+              {t('common.size')}
+              {size && <span className="text-navy normal-case tracking-normal">{size}</span>}
+            </h2>
+            <motion.div
+              key={sizeError ? 'err' : 'ok'}
+              animate={sizeError ? { x: [0, -7, 7, -5, 5, 0] } : undefined}
+              transition={{ duration: 0.35 }}
+              role="radiogroup"
+              aria-label={t('common.size')}
+              className="mt-3 flex flex-wrap gap-2"
             >
-              {s}
-            </button>
-          ))}
+              {product.sizes.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={size === s}
+                  onClick={() => {
+                    setSize(s)
+                    setSizeError(false)
+                  }}
+                  className={`min-w-12 rounded-2xl px-4 py-2.5 text-sm font-bold transition active:scale-95 ${size === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'} ${sizeError ? 'ring-1 ring-coral' : ''}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </motion.div>
+            {sizeError && (
+              <p role="alert" className="mt-2 text-[13px] font-semibold text-coral">
+                {t('product.chooseSize')}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 flex items-center justify-between">
+            <h2 className="text-[13px] font-extrabold uppercase tracking-wider text-stone" style={{ fontFamily: 'var(--font-sans)' }}>
+              {t('product.qty')}
+            </h2>
+            <QtyStepper value={qty} max={Math.max(product.stock, 1)} onChange={setQty} />
+          </div>
+          {!out && qty >= product.stock && <p className="mt-2 text-right text-[12px] font-semibold text-navy-soft">{t('product.maxStock', { n: product.stock })}</p>}
         </div>
 
-        <p className="mt-6 rounded-2xl bg-beige-soft px-3.5 py-2.5 text-[12.5px] font-medium text-navy-soft">{t('product.soon')}</p>
+        <h2 className="mt-7 text-[19px]">{t('product.description')}</h2>
+        <p className="mt-2 text-[14.5px] leading-relaxed text-navy-soft">{product.description}</p>
+
+        <h2 className="mt-7 text-[19px]">{t('product.details')}</h2>
+        <dl className="mt-2 divide-y divide-navy/[0.07] rounded-[22px] bg-white px-4 text-[14px] shadow-[0_8px_26px_-18px_rgba(23,43,58,0.5)]">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-4 py-3">
+              <dt className="text-stone">{k}</dt>
+              <dd className="text-right font-semibold">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       {matching.length > 0 && (
@@ -132,6 +241,40 @@ export function Product() {
           <ProductRail items={similar} />
         </Section>
       )}
+
+      {/* Replaces the tab bar on this screen: price total + the two purchase actions */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3" style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }} data-testid="action-bar">
+        <div className="glass-nav w-full max-w-[480px] rounded-[28px] p-3">
+          <div className="mb-2.5 flex items-baseline justify-between px-1.5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-stone">{t('product.total')}</span>
+            <span data-testid="total-price" className="text-[18px] font-extrabold tabular-nums">
+              {formatUZS(product.price * qty)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              data-testid="add-to-cart"
+              onClick={addToCart}
+              disabled={out}
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-navy px-2 py-3.5 text-[12.5px] font-bold text-white transition active:scale-[0.97] disabled:opacity-40"
+            >
+              <ShoppingBag className="size-4 max-[339px]:hidden" />
+              {t('product.addToCart')}
+            </button>
+            <button
+              type="button"
+              data-testid="quick-order"
+              onClick={quickOrder}
+              disabled={out}
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-coral px-2 py-3.5 text-[12.5px] font-bold text-white shadow-[0_10px_22px_-8px_rgba(217,75,89,0.7)] transition active:scale-[0.97] disabled:opacity-40 disabled:shadow-none"
+            >
+              <Zap className="size-4 max-[339px]:hidden" fill="currentColor" />
+              {t('nav.quick')}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
