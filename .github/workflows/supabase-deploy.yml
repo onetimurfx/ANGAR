@@ -1,0 +1,26 @@
+name: Deploy Supabase backend (manual)
+
+# Manual only. Applies supabase/migrations and deploys the Edge Functions to YOUR Supabase project.
+# Needs these repository SECRETS (Settings > Secrets and variables > Actions > Secrets):
+#   SUPABASE_ACCESS_TOKEN  (Supabase dashboard > Account > Access Tokens)
+#   SUPABASE_PROJECT_REF   (Project settings > General > Reference ID)
+#   SUPABASE_DB_PASSWORD   (the database password chosen when the project was created)
+# Runtime secrets (BOT_TOKEN, SESSION_SECRET, CRON_SECRET, ALLOWED_ORIGINS) are set in Supabase, not here:
+#   see docs/BACKEND_SETUP.md. This workflow has not been run against a real project yet.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+      - run: supabase db push
+      - run: supabase functions deploy --no-verify-jwt

@@ -7,6 +7,8 @@
  *   VITE_DELIVERY_FEE        integer UZS, 0 = free delivery
  *   VITE_DELIVERY_FREE_FROM  optional integer UZS: subtotal from which delivery is free
  */
+import * as catalog from '../data/catalog'
+
 export interface DeliveryConfig {
   configured: boolean
   /** UZS, only meaningful when configured */
@@ -27,7 +29,15 @@ export function readDeliveryConfig(env: { VITE_DELIVERY_FEE?: string; VITE_DELIV
   return { configured: true, fee, freeFrom: freeFrom !== null && freeFrom > 0 ? freeFrom : null }
 }
 
-export const deliveryConfig: DeliveryConfig = readDeliveryConfig(import.meta.env as Record<string, string | undefined>)
+const envConfig: DeliveryConfig = readDeliveryConfig(import.meta.env as Record<string, string | undefined>)
+
+/** With a backend the fee is whatever the shop saved in the database (never a default). Without one, the build-time env values. */
+export function getDeliveryConfig(): DeliveryConfig {
+  if (catalog.source !== 'server') return envConfig
+  const s = catalog.settings
+  if (!s.deliveryConfigured || s.deliveryFee === null) return { configured: false, fee: 0, freeFrom: null }
+  return { configured: true, fee: s.deliveryFee, freeFrom: s.deliveryFreeFrom }
+}
 
 export interface Totals {
   subtotal: number
@@ -38,7 +48,7 @@ export interface Totals {
   total: number
 }
 
-export function computeTotals(subtotal: number, cfg: DeliveryConfig = deliveryConfig): Totals {
+export function computeTotals(subtotal: number, cfg: DeliveryConfig = getDeliveryConfig()): Totals {
   if (!cfg.configured) return { subtotal, deliveryFee: null, deliveryFree: false, deliveryPending: true, total: subtotal }
   if (subtotal <= 0) return { subtotal, deliveryFee: 0, deliveryFree: false, deliveryPending: false, total: subtotal }
   const free = cfg.freeFrom !== null && subtotal >= cfg.freeFrom

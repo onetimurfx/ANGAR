@@ -14,17 +14,16 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 | 2 | Mini App shell, bottom navigation, homepage | done |
 | 3 | Catalog filters/sorting, product details, cart state | done |
 | 4 | Quick Order, cart, checkout (device-only drafts) | done |
-| 5 | Supabase database, storage | planned |
+| 5 | Supabase backend (schema, RLS, Edge Functions, live catalog/cart/orders) | done in code; **your Supabase project must still be created** - see [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md) |
 | 6 | Admin dashboard, orders | planned |
 | 7 | Telegram bot | planned |
 | 8 | Security, testing | planned |
 | 9 | Deployment, Mini App configuration | planned |
 
-**Everything shown in the app is temporary sample data** (`src/data/sample.ts`): names, prices, stock and the vector product
-illustrations are placeholders and every product card is marked `NAMUNA`. There is **no backend yet**: nothing is saved
-on a server, and **no order can be sent to the shop**. Quick Order and the cart produce an *order draft* that is stored only in
-this browser (`localStorage`). Every screen says so ("Do'konga YUBORILMADI"); the draft carries a local reference
-`LOC-…` that is not an AYNIMO order number. The server submit arrives in Phase 5.
+**Demo vs server mode.** With `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` set, the catalog, stock, cart and orders come from Supabase
+and orders are really stored (official numbers `AYN-YYMMDD-00001`). Without them the app runs in demo mode: the built-in
+sample catalog (`src/data/sample.ts`, every product marked `NAMUNA`) and device-only drafts that are clearly shown as *not sent*.
+Sample products can never be ordered in server mode. The delivery fee is never invented: it shows as "not set" until the shop sets it.
 
 ## Navigation
 

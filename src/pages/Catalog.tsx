@@ -5,10 +5,11 @@ import { PageHeader, EmptyState } from '../components/ui'
 import { ProductCard } from '../components/ProductCard'
 import { BottomSheet } from '../components/BottomSheet'
 import { FilterSheet } from '../components/FilterSheet'
-import { activeProducts, brands, categories } from '../data/sample'
+import { activeProducts, brands, categories } from '../data/catalog'
 import { EMPTY, SORTS, activeGroups, applyFilters, facets, parseFilters, serializeFilters, type FilterState } from '../lib/filters'
 import { formatUZS } from '../lib/format'
 import type { Key } from '../i18n/uz'
+import { useCatalogVersion } from '../lib/backendContext'
 import { t } from '../i18n'
 
 export function Catalog() {
@@ -17,8 +18,11 @@ export function Catalog() {
   const input = useRef<HTMLInputElement>(null)
   const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null)
   const [draft, setDraft] = useState<FilterState>(state)
-  const all = useMemo(() => activeProducts(), [])
-  const { bounds } = useMemo(() => facets(), [])
+  const version = useCatalogVersion()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const all = useMemo(() => activeProducts(), [version])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { bounds } = useMemo(() => facets(), [version])
 
   useEffect(() => {
     if (params.get('focus')) input.current?.focus()

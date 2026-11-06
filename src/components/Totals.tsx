@@ -1,9 +1,9 @@
-import { computeTotals, deliveryConfig, type DeliveryConfig } from '../lib/delivery'
+import { computeTotals, getDeliveryConfig, type DeliveryConfig } from '../lib/delivery'
 import { formatUZS } from '../lib/format'
 import { t } from '../i18n'
 
 /** Subtotal, delivery and final total. While the fee is not configured it says so instead of guessing a number. */
-export function Totals({ subtotal, count, config = deliveryConfig }: { subtotal: number; count?: number; config?: DeliveryConfig }) {
+export function Totals({ subtotal, count, config = getDeliveryConfig() }: { subtotal: number; count?: number; config?: DeliveryConfig }) {
   const tot = computeTotals(subtotal, config)
   return (
     <div data-testid="totals" className="rounded-[26px] bg-white p-4 shadow-[0_12px_28px_-18px_rgba(23,43,58,0.55)]">

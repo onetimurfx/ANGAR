@@ -6,17 +6,21 @@ import { ContactFields } from '../components/ContactFields'
 import { ProductImage } from '../components/ProductImage'
 import { Totals } from '../components/Totals'
 import { NoBackendNotice } from '../components/NoticeBanner'
-import { getProduct } from '../data/sample'
+import { getProduct } from '../data/catalog'
 import { formatUZS } from '../lib/format'
 import { lineKey, useCart } from '../lib/cart'
 import { focusFirstInvalid, useOrderForm } from '../lib/useOrderForm'
+import { describeFailure, type Problem } from '../lib/orderProblems'
+import { useBackend, useCatalogVersion } from '../lib/backendContext'
 import { t } from '../i18n'
 
 export function Checkout() {
   const { lines, count, subtotal, clear } = useCart()
+  useCatalogVersion()
+  const { mode } = useBackend()
   const form = useOrderForm('cart')
   const formRef = useRef<HTMLFormElement>(null)
-  const [problem, setProblem] = useState<string[] | null>(null)
+  const [problem, setProblem] = useState<Problem | null>(null)
 
   if (lines.length === 0) {
     return (
@@ -36,7 +40,7 @@ export function Checkout() {
     )
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (form.submitting) return
     setProblem(null)
@@ -44,15 +48,14 @@ export function Checkout() {
       focusFirstInvalid(formRef.current)
       return
     }
-    const out = form.submit(
+    const out = await form.submit(
       'cart',
       lines.map((l) => ({ productId: l.productId, size: l.size, color: l.color, qty: l.qty })),
       clear,
     )
     if (out && !out.ok) {
-      if (out.reason === 'stock') setProblem(out.issues.map((i) => t('checkout.stockLine', { name: i.name, r: i.requested, a: i.available })))
-      else if (out.reason === 'variant') setProblem([t('checkout.variantProblem')])
-      else if (out.reason === 'contact') focusFirstInvalid(formRef.current)
+      if (out.reason === 'contact') focusFirstInvalid(formRef.current)
+      else setProblem(describeFailure(out))
     }
   }
 
@@ -101,9 +104,9 @@ export function Checkout() {
 
         {problem && (
           <div role="alert" data-testid="submit-problem" className="mt-4 rounded-2xl bg-coral-soft px-4 py-3 text-[13.5px] font-semibold text-coral-deep">
-            <p>{t('checkout.stockProblem')}</p>
+            <p>{problem.title}</p>
             <ul className="mt-1 list-disc pl-5 font-medium">
-              {problem.map((x) => (
+              {problem.lines.map((x) => (
                 <li key={x}>{x}</li>
               ))}
             </ul>
@@ -117,7 +120,7 @@ export function Checkout() {
           disabled={form.submitting}
           className="mt-4 w-full rounded-full bg-coral px-5 py-4 text-[15px] font-bold text-white shadow-[0_14px_28px_-10px_rgba(217,75,89,0.75)] transition active:scale-[0.98] disabled:opacity-60"
         >
-          {form.submitting ? t('submit.saving') : t('checkout.submit')}
+          {form.submitting ? t('submit.saving') : mode === 'server' ? t('checkout.submitServer') : t('checkout.submit')}
         </button>
       </form>
     </div>

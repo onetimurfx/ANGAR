@@ -8,7 +8,8 @@ import { ProductRail } from '../components/ProductCard'
 import { OutfitCard } from '../components/OutfitCard'
 import { QtyStepper } from '../components/QtyStepper'
 import { DockPanel } from '../components/Dock'
-import { activeProducts, categories, getBrand, getProduct, outfits } from '../data/sample'
+import { activeProducts, categories, getBrand, getProduct, outfits, variantQty } from '../data/catalog'
+import { useCatalogVersion } from '../lib/backendContext'
 import { discountPercent, formatUZS } from '../lib/format'
 import { pushRecent } from '../lib/recent'
 import { useCart } from '../lib/cart'
@@ -31,6 +32,7 @@ export function CartLink() {
 }
 
 export function Product() {
+  useCatalogVersion()
   const { id = '' } = useParams()
   const product = getProduct(id)
   const navigate = useNavigate()
@@ -49,7 +51,7 @@ export function Product() {
     setSize(product && product.sizes.length === 1 ? product.sizes[0] : null)
     setQty(1)
     setSizeError(false)
-  }, [product])
+  }, [product?.id]) // NOT the object: a catalog refresh must not reset the customer's choice
 
   if (!product || !product.active) {
     return (
@@ -70,9 +72,11 @@ export function Product() {
 
   const brand = getBrand(product.brandId)
   const off = discountPercent(product.price, product.oldPrice)
-  const out = product.stock <= 0
-  const low = !out && product.stock <= 5
-  const color = product.colors[colorIdx]
+  const color = product.colors[colorIdx] ?? product.colors[0]
+  /** pieces of the chosen colour (+ size once chosen) */
+  const avail = variantQty(product, size, color.name)
+  const out = avail <= 0
+  const low = !out && avail <= 5
   const similar = activeProducts().filter((x) => x.categoryId === product.categoryId && x.id !== product.id)
   const matching = outfits.filter((o) => o.productIds.includes(product.id))
   const inCart = cart.qtyOf(product.id)
@@ -89,8 +93,8 @@ export function Product() {
       toast.show(t('product.chooseSize'), { tone: 'warn' })
       return null
     }
-    if (qty < 1 || qty > product.stock) {
-      toast.show(t('product.maxStock', { n: product.stock }), { tone: 'warn' })
+    if (qty < 1 || qty > avail) {
+      toast.show(t('product.maxStock', { n: avail }), { tone: 'warn' })
       return null
     }
     return { size }
@@ -101,7 +105,7 @@ export function Product() {
     if (!v) return
     const res = cart.add({ productId: product.id, size: v.size, color: color.name, qty })
     if (!res.ok) {
-      toast.show(res.max > 0 ? `${t('product.maxStock', { n: product.stock })} (${inCart})` : t('product.cartFull'), { tone: 'warn' })
+      toast.show(res.max > 0 ? `${t('product.maxStock', { n: res.max })} (${inCart})` : t('product.cartFull'), { tone: 'warn' })
       return
     }
     haptic()
@@ -130,7 +134,7 @@ export function Product() {
     <div className="pb-56">
       <PageHeader title={brand?.name ?? ''} right={<CartLink />} />
       <div className="px-4">
-        <Gallery categoryId={product.categoryId} color={color.hex} name={product.name} />
+        <Gallery categoryId={product.categoryId} color={color.hex} name={product.name} images={product.images} sample={product.sample} />
 
         <div className="mt-6 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -148,7 +152,7 @@ export function Product() {
 
         <p data-testid="stock-status" className={`mt-2 flex items-center gap-2 text-[13px] font-bold ${out ? 'text-coral' : low ? 'text-[#b5651d]' : 'text-[#4f6a3c]'}`}>
           <span className={`size-2 rounded-full ${out ? 'bg-coral' : low ? 'bg-[#e0922f]' : 'bg-[#6f9a52]'}`} />
-          {out ? t('common.outOfStock') : low ? t('product.lowStock', { n: product.stock }) : `${t('common.inStock')}: ${product.stock} ${t('common.pcs')}`}
+          {out ? t('common.outOfStock') : low ? t('product.lowStock', { n: avail }) : `${t('common.inStock')}: ${avail} ${t('common.pcs')}`}
         </p>
 
         <div className="glass mt-5 rounded-[26px] p-4">
@@ -162,7 +166,11 @@ export function Product() {
                 type="button"
                 aria-label={c.name}
                 aria-pressed={colorIdx === i}
-                onClick={() => setColorIdx(i)}
+                onClick={() => {
+                  setColorIdx(i)
+                  // the chosen size may not exist in the new colour
+                  if (size && variantQty(product, size, c.name) <= 0) setSize(null)
+                }}
                 className={`size-10 rounded-full border border-navy/15 transition active:scale-90 ${colorIdx === i ? 'ring-2 ring-coral ring-offset-2 ring-offset-white' : ''}`}
                 style={{ background: c.hex }}
               />
@@ -182,9 +190,13 @@ export function Product() {
               aria-label={t('common.size')}
               className="mt-3 flex flex-wrap gap-2"
             >
-              {product.sizes.map((s) => (
+              {product.sizes.map((s) => {
+                const none = variantQty(product, s, color.name) <= 0
+                return (
                 <button
                   key={s}
+                  disabled={none}
+                  title={none ? t('common.outOfStock') : undefined}
                   type="button"
                   role="radio"
                   aria-checked={size === s}
@@ -192,11 +204,12 @@ export function Product() {
                     setSize(s)
                     setSizeError(false)
                   }}
-                  className={`min-w-12 rounded-2xl px-4 py-2.5 text-sm font-bold transition active:scale-95 ${size === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'} ${sizeError ? 'ring-1 ring-coral' : ''}`}
+                  className={`min-w-12 rounded-2xl px-4 py-2.5 text-sm font-bold transition active:scale-95 ${none ? 'opacity-35 line-through' : ''} ${size === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'} ${sizeError ? 'ring-1 ring-coral' : ''}`}
                 >
                   {s}
                 </button>
-              ))}
+                )
+              })}
             </motion.div>
             {sizeError && (
               <p role="alert" className="mt-2 text-[13px] font-semibold text-coral">
@@ -209,9 +222,9 @@ export function Product() {
             <h2 className="text-[13px] font-extrabold uppercase tracking-wider text-stone" style={{ fontFamily: 'var(--font-sans)' }}>
               {t('product.qty')}
             </h2>
-            <QtyStepper value={qty} max={Math.max(product.stock, 1)} onChange={setQty} />
+            <QtyStepper value={qty} max={Math.max(avail, 1)} onChange={setQty} />
           </div>
-          {!out && qty >= product.stock && <p className="mt-2 text-right text-[12px] font-semibold text-navy-soft">{t('product.maxStock', { n: product.stock })}</p>}
+          {!out && qty >= avail && <p className="mt-2 text-right text-[12px] font-semibold text-navy-soft">{t('product.maxStock', { n: avail })}</p>}
           <div className="mt-4 flex items-baseline justify-between border-t border-navy/[0.07] pt-3">
             <span className="text-[13px] font-extrabold uppercase tracking-wider text-stone">{t('product.total')}</span>
             <span data-testid="total-price" className="text-[20px] font-extrabold tabular-nums">

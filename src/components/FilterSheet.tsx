@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
-import { brands, categories } from '../data/sample'
+import { brands, categories } from '../data/catalog'
 import { formatUZS } from '../lib/format'
 import { EMPTY, TAGS, facets, type FilterState } from '../lib/filters'
 import type { Key } from '../i18n/uz'

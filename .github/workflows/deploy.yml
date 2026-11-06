@@ -1,7 +1,8 @@
 name: Deploy Mini App preview to GitHub Pages
 
-# Phases 1-2 are a static front-end, so GitHub Pages (HTTPS) is enough to open it inside Telegram.
-# The backend (Supabase), bot host and production hosting are added in later phases.
+# The front-end is static (GitHub Pages, HTTPS). The backend lives in Supabase (see docs/BACKEND_SETUP.md).
+# VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are PUBLIC values stored as repository *Variables*.
+# If they are not set the app builds in demo mode (sample catalog, orders are NOT sent anywhere).
 on:
   push:
     branches: [main]
@@ -29,6 +30,8 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

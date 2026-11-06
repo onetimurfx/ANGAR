@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { deliveryConfig } from './delivery'
+import { getDeliveryConfig } from './delivery'
 import { clearAttemptId, getAttemptId, useContactDraft } from './drafts'
 import type { OrderLineInput } from './orders'
 import { useOrders, type PlaceOutcome } from './ordersStore'
@@ -66,18 +66,24 @@ export function useOrderForm(scope: Scope) {
   }
 
   /** Saves the draft order. Returns the outcome so the screen can explain failures; navigates itself on success. */
-  const submit = (source: Scope, lines: OrderLineInput[], afterSave?: () => void): PlaceOutcome | null => {
+  const submit = async (source: Scope, lines: OrderLineInput[], afterSave?: () => void): Promise<PlaceOutcome | null> => {
     if (lock.current) return null
     lock.current = true
     setSubmitting(true)
-    const out = place({ attemptId: getAttemptId(scope), source, contact: draft.value, lines, delivery: deliveryConfig, telegramUserId: tg?.id })
+    let out: PlaceOutcome
+    try {
+      out = await place({ attemptId: getAttemptId(scope), source, contact: draft.value, lines, delivery: getDeliveryConfig(), telegramUserId: tg?.id })
+    } catch {
+      out = { ok: false, reason: 'error', kind: 'server', code: 'UNKNOWN' }
+    }
     if (!out.ok) {
       if (out.reason === 'contact') setErrors(out.errors)
       lock.current = false
       setSubmitting(false)
       return out
     }
-    // success: keep the lock (the screen is replaced), forget the typed data and the attempt key
+    // success: keep the lock (the screen is replaced), forget the typed data and the attempt key.
+    // (a FAILED attempt keeps its key: retrying the same form can never create two orders)
     draft.clear()
     clearAttemptId(scope)
     afterSave?.()

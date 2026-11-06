@@ -7,13 +7,16 @@ import { QtyStepper } from '../components/QtyStepper'
 import { BottomSheet } from '../components/BottomSheet'
 import { DockPanel } from '../components/Dock'
 import { Totals } from '../components/Totals'
-import { getProduct } from '../data/sample'
+import { getProduct } from '../data/catalog'
 import { computeTotals } from '../lib/delivery'
 import { formatUZS } from '../lib/format'
 import { lineKey, useCart } from '../lib/cart'
+import { variantQty } from '../data/catalog'
+import { useCatalogVersion } from '../lib/backendContext'
 import { t } from '../i18n'
 
 export function Cart() {
+  useCatalogVersion()
   const { lines, count, subtotal, setQty, remove, qtyOf, changeVariant } = useCart()
   const navigate = useNavigate()
   const [editKey, setEditKey] = useState<string | null>(null)
@@ -60,7 +63,7 @@ export function Cart() {
           if (!p) return null
           const key = lineKey(l)
           const hex = p.colors.find((c) => c.name === l.color)?.hex ?? p.colors[0].hex
-          const max = Math.max(1, p.stock - qtyOf(p.id, key))
+          const max = Math.max(1, Math.min(variantQty(p, l.size, l.color), p.stock - qtyOf(p.id, key)))
           const canChange = p.sizes.length > 1 || p.colors.length > 1
           return (
             <li key={key} data-testid="cart-line" className="flex gap-3 rounded-[26px] bg-white p-3 shadow-[0_12px_28px_-18px_rgba(23,43,58,0.55)]">
@@ -172,8 +175,9 @@ export function Cart() {
                   type="button"
                   role="radio"
                   aria-checked={size === s}
+                  disabled={Boolean(editLine) && variantQty(editProduct, s, color) < (editLine?.qty ?? 1) && !(s === editLine?.size && color === editLine?.color)}
                   onClick={() => setSize(s)}
-                  className={`min-w-12 rounded-2xl px-4 py-2.5 text-sm font-bold ${size === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'}`}
+                  className={`min-w-12 rounded-2xl px-4 py-2.5 text-sm font-bold disabled:line-through disabled:opacity-35 ${size === s ? 'bg-navy text-white' : 'bg-white shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)]'}`}
                 >
                   {s}
                 </button>

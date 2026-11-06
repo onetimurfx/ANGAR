@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Outfit } from '../data/types'
-import { outfitProducts, outfitTotal } from '../data/sample'
+import { outfitProducts, outfitTotal } from '../data/catalog'
 import { formatUZS } from '../lib/format'
 import { t } from '../i18n'
 import { ProductImage } from './ProductImage'

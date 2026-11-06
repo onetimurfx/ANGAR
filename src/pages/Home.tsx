@@ -7,13 +7,15 @@ import { ProductCard, ProductRail } from '../components/ProductCard'
 import { OutfitCard } from '../components/OutfitCard'
 import { NotificationsSheet } from '../components/NotificationsSheet'
 import { Section } from '../components/ui'
-import { activeProducts, categories, getProduct, outfits } from '../data/sample'
+import { activeProducts, banners, categories, getProduct, outfits } from '../data/catalog'
 import { useRecent } from '../lib/recent'
+import { useCatalogVersion } from '../lib/backendContext'
 import { t } from '../i18n'
 
 const NON_CLOTHING = new Set(['shoes', 'accessories', 'bags'])
 
 export function Home() {
+  useCatalogVersion()
   const navigate = useNavigate()
   const [sheet, setSheet] = useState(false)
   const recent = useRecent()
@@ -43,9 +45,10 @@ export function Home() {
         </div>
       </header>
 
-      <p className="mx-4 mb-4 mt-1 rounded-2xl bg-beige-soft px-3.5 py-2 text-[12px] font-medium text-navy-soft">{t('home.demo')}</p>
+      {all.some((p) => p.sample) && <p data-testid="sample-note" className="mx-4 mb-4 mt-1 rounded-2xl bg-beige-soft px-3.5 py-2 text-[12px] font-medium text-navy-soft">{t('home.demo')}</p>}
 
-      <BannerCarousel />
+      {banners.length > 0 && <BannerCarousel />}
+      {all.length === 0 && <p data-testid="catalog-empty" className="mx-4 mt-6 rounded-2xl bg-white px-4 py-6 text-center text-[14px] text-navy-soft">{t('catalog.notReady')}</p>}
 
       <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto px-4" aria-label={t('home.categories')}>
         {categories.map((c) => (
@@ -55,6 +58,7 @@ export function Home() {
         ))}
       </div>
 
+      {newest.length > 0 && (
       <Section title={t('home.newCollection')} to="/katalog?f=new">
         <div className="grid grid-cols-2 gap-3 px-4">
           {newest.slice(0, 2).map((p) => (
@@ -62,35 +66,51 @@ export function Home() {
           ))}
         </div>
       </Section>
+      )}
 
+      {all.some((p) => p.type === 'original') && (
       <Section title={t('home.original')} to="/katalog?f=original">
         <ProductRail items={all.filter((p) => p.type === 'original').slice(0, 8)} />
       </Section>
+      )}
 
+      {all.some((p) => p.type === 'other') && (
       <Section title={t('home.otherBrands')} to="/katalog?f=other">
         <ProductRail items={all.filter((p) => p.type === 'other').slice(0, 8)} />
       </Section>
+      )}
 
+      {popular.length > 0 && (
       <Section title={t('home.popular')} to="/katalog?sort=popular">
         <ProductRail items={popular} />
       </Section>
+      )}
 
+      {byDate.length > 0 && (
       <Section title={t('home.newArrivals')} to="/katalog?f=new">
         <ProductRail items={byDate.slice(0, 8)} />
       </Section>
+      )}
 
+      {discounted.length > 0 && (
       <Section title={t('home.discounted')} to="/katalog?f=discount">
         <ProductRail items={discounted} />
       </Section>
+      )}
 
+      {all.some((p) => p.categoryId === 'shoes') && (
       <Section title={t('home.shoes')} to="/katalog?cat=shoes">
         <ProductRail items={all.filter((p) => p.categoryId === 'shoes')} />
       </Section>
+      )}
 
+      {clothing.length > 0 && (
       <Section title={t('home.clothing')} to="/katalog">
         <ProductRail items={clothing.slice(0, 10)} />
       </Section>
+      )}
 
+      {outfits.length > 0 && (
       <Section title={t('home.style')} sub={t('home.styleSub')}>
         <div className="rail">
           {outfits.map((o) => (
@@ -98,6 +118,7 @@ export function Home() {
           ))}
         </div>
       </Section>
+      )}
 
       {recentProducts.length > 0 && (
         <Section title={t('home.recent')}>

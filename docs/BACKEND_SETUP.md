@@ -1,0 +1,48 @@
+# AYNIMO backend setup (Supabase)
+
+The repository contains the complete backend (`supabase/`), but **no Supabase project has been created for you**.
+Follow these steps once. **Never paste secrets into chat, issues or code**: they go only into the places named below.
+
+## What is public and what is secret
+
+| Value | Where it lives | Public? |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | GitHub *Variables* (or hosting build env) | yes - ends up in the browser; RLS limits it to reading the active catalog |
+| `BOT_TOKEN` (from @BotFather) | Supabase *Edge Function secrets* | **secret** |
+| `SESSION_SECRET` (random, 32+ chars) | Supabase Edge Function secrets | **secret** |
+| `CRON_SECRET` (random, 16+ chars) | Supabase Edge Function secrets | **secret** |
+| `ALLOWED_ORIGINS` (comma separated, e.g. `https://onetimurfx.github.io`) | Supabase Edge Function secrets | not secret |
+| service-role key | **not used by this project at all** (functions use the injected `SUPABASE_DB_URL`) | never put it in the frontend |
+| `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` | GitHub *Secrets* (only for the manual deploy workflow) | secret |
+
+## Steps
+
+1. Create a project at supabase.com. Note the project reference.
+2. Apply the schema: `supabase link --project-ref <ref>` then `supabase db push`
+   (or run the manual GitHub workflow *Deploy Supabase backend*, which also deploys the functions).
+3. Set function secrets in the dashboard (Edge Functions > Secrets) or with the CLI, typing values locally:
+   `supabase secrets set BOT_TOKEN=... SESSION_SECRET=$(openssl rand -hex 32) CRON_SECRET=$(openssl rand -hex 16) ALLOWED_ORIGINS=https://<your-pages-origin>`
+4. Deploy functions: `supabase functions deploy --no-verify-jwt` (auth is done inside the functions with Telegram initData).
+5. Add administrators (only these Telegram IDs may use admin features): in the SQL editor
+   `insert into public.administrators (telegram_id, name) values (<telegram id>, '<name>');`
+6. Frontend: in GitHub > Settings > Secrets and variables > Actions > **Variables** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then push to `main`.
+7. Bot messages: schedule `POST https://<ref>.supabase.co/functions/v1/notify-outbox` with header `x-cron-secret: <CRON_SECRET>`
+   every minute (Supabase Cron / pg_cron) so failed notifications are retried. New orders also try to notify immediately.
+8. Delivery fee: it stays "not set" until you set `settings.delivery_fee` (UZS). The app never invents a price.
+9. Real products: insert into `categories`, `brands`, `products`, `product_variants`, `inventory` (Phase 6 adds the admin panel).
+   Placeholder products must keep `is_sample = true`; they are shown as NAMUNA and cannot be ordered
+   (`settings.allow_sample_orders` is false).
+
+Without steps 1-6 the app runs in **demo mode**: sample catalog, orders are *not sent* and every screen says so.
+
+## Security model
+
+- Browser -> `get_catalog()` with the anon key only; RLS is enabled on all 17 tables, private tables are denied to `anon`/`authenticated`.
+- Customer data -> Edge Functions only. `telegram-auth` verifies the Telegram `initData` HMAC (and age) and returns a short-lived signed session.
+- Admin rights are checked in the database (`administrators`) on every call, never stored in the token.
+- `place_order` re-prices from the catalog, locks inventory rows, refuses insufficient stock and duplicates (idempotency key per customer), rate limits to 20/hour.
+
+## Tests
+
+`npm test` (unit + secret scan) - `npm run test:db` (real PostgreSQL: migrations, RLS, SQL functions, Edge Function handlers) -
+`node tests/e2e/live.cjs` (browser against a real DB + the real handlers; only Telegram's Bot API is faked) - `npm run test:e2e`.

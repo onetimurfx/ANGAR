@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
-import { banners } from '../data/sample'
+import { banners } from '../data/catalog'
 import type { Banner } from '../data/types'
 
 const TONES: Record<Banner['tone'], string> = {

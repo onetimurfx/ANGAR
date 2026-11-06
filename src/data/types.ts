@@ -3,7 +3,8 @@ export type CategoryId =
   | 'jackets' | 'hoodies' | 'sweaters' | 'outerwear' | 'accessories' | 'bags'
 
 export interface Category {
-  id: CategoryId
+  /** 'all' is a UI-only pseudo category; every other id comes from the catalog (sample data or the server) */
+  id: string
   name: string
 }
 
@@ -18,26 +19,47 @@ export interface ColorOption {
   hex: string
 }
 
+/** Stock of one purchasable variant (size + colour). Present for server products; sample products use `stock`. */
+export interface VariantStock {
+  size: string
+  /** colour NAME (matches ColorOption.name) */
+  color: string
+  qty: number
+}
+
 export interface Product {
   id: string
   name: string
   brandId: string
   description: string
-  categoryId: Exclude<CategoryId, 'all'>
+  categoryId: string
   /** UZS */
   price: number
   oldPrice?: number
   sizes: string[]
   colors: ColorOption[]
+  /** total pieces over all variants */
   stock: number
+  /** per-variant stock (server catalog). When absent, `stock` is the only limit. */
+  variants?: VariantStock[]
+  /** object paths in the public Storage bucket "product-images" (server catalog). Empty = show the illustration. */
+  images?: string[]
   type: 'original' | 'other'
   isNew: boolean
   active: boolean
   popularity: number
   /** ISO date, used for "newest" ordering */
   createdAt: string
-  /** every product in this build is a temporary sample */
-  sample: true
+  /** true = placeholder product (marked NAMUNA, cannot be ordered unless the shop allows sample orders) */
+  sample: boolean
+}
+
+export interface ShopSettings {
+  /** false until the shop sets a delivery fee: the UI then says "not set yet" and never guesses a price */
+  deliveryConfigured: boolean
+  deliveryFee: number | null
+  deliveryFreeFrom: number | null
+  supportContact: string | null
 }
 
 export interface Outfit {

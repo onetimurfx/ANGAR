@@ -1,0 +1,16 @@
+# Supabase CLI config (local dev). Our Edge Functions authenticate with Telegram initData and their own
+# session token, not with a Supabase JWT, so JWT verification is off for them.
+project_id = "aynimo"
+
+[functions.telegram-auth]
+verify_jwt = false
+[functions.place-order]
+verify_jwt = false
+[functions.cart]
+verify_jwt = false
+[functions.my-orders]
+verify_jwt = false
+[functions.admin-whoami]
+verify_jwt = false
+[functions.notify-outbox]
+verify_jwt = false

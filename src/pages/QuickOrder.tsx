@@ -7,21 +7,25 @@ import { QtyStepper } from '../components/QtyStepper'
 import { ContactFields } from '../components/ContactFields'
 import { Totals } from '../components/Totals'
 import { NoBackendNotice } from '../components/NoticeBanner'
-import { activeProducts, getBrand, getProduct } from '../data/sample'
+import { activeProducts, getBrand, getProduct } from '../data/catalog'
 import { formatUZS } from '../lib/format'
 import { useCart } from '../lib/cart'
 import { focusFirstInvalid, useOrderForm } from '../lib/useOrderForm'
+import { describeFailure, type Problem } from '../lib/orderProblems'
+import { useBackend, useCatalogVersion } from '../lib/backendContext'
 import { t } from '../i18n'
 
 const H = 'mb-3 text-[13px] font-extrabold uppercase tracking-wider text-stone'
 
 export function QuickOrder() {
   const { quick, setQuick } = useCart()
+  useCatalogVersion()
+  const { mode } = useBackend()
   const form = useOrderForm('quick')
   const formRef = useRef<HTMLFormElement>(null)
   const rail = useRef<HTMLDivElement>(null)
   const [selErr, setSelErr] = useState<{ product?: boolean; size?: boolean }>({})
-  const [problem, setProblem] = useState<string[] | null>(null)
+  const [problem, setProblem] = useState<Problem | null>(null)
 
   const products = activeProducts().filter((p) => p.stock > 0)
   const product = quick ? getProduct(quick.productId) : undefined
@@ -42,7 +46,7 @@ export function QuickOrder() {
     setProblem(null)
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (form.submitting) return
     setProblem(null)
@@ -53,11 +57,10 @@ export function QuickOrder() {
       focusFirstInvalid(formRef.current)
       return
     }
-    const out = form.submit('quick', [{ productId: product.id, size: quick.size, color: quick.color, qty: quick.qty }], () => setQuick(null))
+    const out = await form.submit('quick', [{ productId: product.id, size: quick.size, color: quick.color, qty: quick.qty }], () => setQuick(null))
     if (out && !out.ok) {
-      if (out.reason === 'stock') setProblem(out.issues.map((i) => t('checkout.stockLine', { name: i.name, r: i.requested, a: i.available })))
-      else if (out.reason === 'variant') setProblem([t('checkout.variantProblem')])
-      else if (out.reason === 'contact') focusFirstInvalid(formRef.current)
+      if (out.reason === 'contact') focusFirstInvalid(formRef.current)
+      else setProblem(describeFailure(out))
     }
   }
 
@@ -186,9 +189,9 @@ export function QuickOrder() {
 
         {problem && (
           <div role="alert" data-testid="submit-problem" className="mt-4 rounded-2xl bg-coral-soft px-4 py-3 text-[13.5px] font-semibold text-coral-deep">
-            <p>{t('checkout.stockProblem')}</p>
+            <p>{problem.title}</p>
             <ul className="mt-1 list-disc pl-5 font-medium">
-              {problem.map((x) => (
+              {problem.lines.map((x) => (
                 <li key={x}>{x}</li>
               ))}
             </ul>
@@ -203,7 +206,7 @@ export function QuickOrder() {
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-coral px-5 py-4 text-[15px] font-bold text-white shadow-[0_14px_28px_-10px_rgba(217,75,89,0.75)] transition active:scale-[0.98] disabled:opacity-60"
         >
           <Zap className="size-[18px]" fill="currentColor" />
-          {form.submitting ? t('submit.saving') : t('quick.submit')}
+          {form.submitting ? t('submit.saving') : mode === 'server' ? t('checkout.submitServer') : t('quick.submit')}
         </button>
       </form>
     </div>

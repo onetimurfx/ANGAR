@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { PackageX } from 'lucide-react'
 import { PageHeader, EmptyState, primaryBtn } from '../components/ui'
 import { ProductCard } from '../components/ProductCard'
-import { getOutfit, outfitProducts, outfitTotal } from '../data/sample'
+import { getOutfit, outfitProducts, outfitTotal } from '../data/catalog'
 import { formatUZS } from '../lib/format'
 import { t } from '../i18n'
 

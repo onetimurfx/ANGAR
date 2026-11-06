@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { initTelegram } from './lib/telegram'
+import { BackendProvider } from './lib/backendContext'
 
 initTelegram()
 
@@ -11,7 +12,9 @@ initTelegram()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-      <App />
+      <BackendProvider>
+        <App />
+      </BackendProvider>
     </BrowserRouter>
   </StrictMode>,
 )

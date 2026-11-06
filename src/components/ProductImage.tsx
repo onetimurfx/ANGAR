@@ -1,5 +1,4 @@
-import { useId, type ReactNode } from 'react'
-import type { Product } from '../data/types'
+import { useId, useState, type ReactNode } from 'react'
 
 /**
  * Original vector illustrations used while the catalog is sample data.
@@ -10,7 +9,7 @@ const LINE = 'rgba(23,43,58,0.28)'
 type Draw = (fill: string) => ReactNode
 const stroke = { stroke: LINE, strokeWidth: 1.4, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const }
 
-const GARMENTS: Record<Product['categoryId'], Draw> = {
+const GARMENTS: Record<string, Draw> = {
   tshirts: (f) => (
     <>
       <path d="M38 20 52 14Q60 25 68 14L82 20 102 40 90 54 82 48V112H38V48L30 54 18 40Z" fill={f} {...stroke} />
@@ -107,16 +106,20 @@ const TRANSFORMS = [
 ]
 
 interface Props {
-  categoryId: Product['categoryId']
+  categoryId: string
   color: string
+  /** public URL of a real photo; the illustration is shown when absent or when it fails to load */
+  src?: string | null
   /** 0-3: different backdrops/crops stand in for a photo gallery (3 = close-up detail) */
   view?: number
   className?: string
   label?: string
 }
 
-export function ProductImage({ categoryId, color, view = 0, className = '', label }: Props) {
+export function ProductImage({ categoryId, color, src, view = 0, className = '', label }: Props) {
   const id = useId()
+  const [bad, setBad] = useState(false)
+  if (src && !bad) return <img src={src} alt={label ?? ''} aria-hidden={label ? undefined : true} loading="lazy" onError={() => setBad(true)} className={`${className} object-cover`} />
   const [a, b] = BACKDROPS[view % BACKDROPS.length]
   return (
     <svg
@@ -136,7 +139,7 @@ export function ProductImage({ categoryId, color, view = 0, className = '', labe
       <rect width="120" height="140" fill={`url(#${id}-bg)`} />
       <ellipse cx="60" cy="130" rx="34" ry="3.5" fill="rgba(23,43,58,0.12)" />
       <g transform={TRANSFORMS[view % 4]}>
-        {GARMENTS[categoryId](color)}
+        {(GARMENTS[categoryId] ?? GARMENTS.tshirts)(color)}
       </g>
     </svg>
   )

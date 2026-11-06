@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/types'
-import { getBrand } from '../data/sample'
+import { getBrand } from '../data/catalog'
+import { imageUrl } from '../lib/backend'
 import { discountPercent, formatUZS } from '../lib/format'
 import { t } from '../i18n'
 import { ProductImage } from './ProductImage'
@@ -18,12 +19,12 @@ export function ProductCard({ product, grid = false }: { product: Product; grid?
       className={`group block ${grid ? 'w-full' : 'w-[160px]'} transition-transform active:scale-[0.98]`}
     >
       <div className="relative aspect-[6/7] overflow-hidden rounded-[24px] bg-white shadow-[0_12px_28px_-16px_rgba(23,43,58,0.55)]">
-        <ProductImage categoryId={product.categoryId} color={product.colors[0].hex} className={`size-full transition-transform duration-500 group-active:scale-105 ${out ? 'opacity-45 grayscale-[0.4]' : ''}`} />
+        <ProductImage categoryId={product.categoryId} color={product.colors[0].hex} src={product.images?.[0] ? imageUrl(product.images[0]) : null} className={`size-full transition-transform duration-500 group-active:scale-105 ${out ? 'opacity-45 grayscale-[0.4]' : ''}`} />
         <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
           {product.isNew && <span className="rounded-full bg-navy px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-white">{t('common.new')}</span>}
           {off > 0 && <span className="rounded-full bg-coral px-2.5 py-1 text-[10px] font-extrabold text-white">-{off}%</span>}
         </div>
-        <span className="glass-chip absolute bottom-2.5 left-2.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider text-navy-soft">{t('common.sample')}</span>
+        {product.sample && <span className="glass-chip absolute bottom-2.5 left-2.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider text-navy-soft">{t('common.sample')}</span>}
         {out && (
           <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-navy/85 py-1.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-white">
             {t('common.outOfStock')}

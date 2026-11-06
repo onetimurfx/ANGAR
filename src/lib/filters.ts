@@ -1,5 +1,5 @@
 import type { Product } from '../data/types'
-import { activeProducts, brands, categories } from '../data/sample'
+import { activeProducts, brands, categories } from '../data/catalog'
 
 export type SortKey = 'popular' | 'newest' | 'price_asc' | 'price_desc'
 export type Tag = 'new' | 'original' | 'other' | 'discount'
