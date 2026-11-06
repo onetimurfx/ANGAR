@@ -7,6 +7,7 @@ import { Gallery } from '../components/Gallery'
 import { ProductRail } from '../components/ProductCard'
 import { OutfitCard } from '../components/OutfitCard'
 import { QtyStepper } from '../components/QtyStepper'
+import { DockPanel } from '../components/Dock'
 import { activeProducts, categories, getBrand, getProduct, outfits } from '../data/sample'
 import { discountPercent, formatUZS } from '../lib/format'
 import { pushRecent } from '../lib/recent'
@@ -126,7 +127,7 @@ export function Product() {
   ]
 
   return (
-    <div className="pb-48">
+    <div className="pb-56">
       <PageHeader title={brand?.name ?? ''} right={<CartLink />} />
       <div className="px-4">
         <Gallery categoryId={product.categoryId} color={color.hex} name={product.name} />
@@ -211,6 +212,12 @@ export function Product() {
             <QtyStepper value={qty} max={Math.max(product.stock, 1)} onChange={setQty} />
           </div>
           {!out && qty >= product.stock && <p className="mt-2 text-right text-[12px] font-semibold text-navy-soft">{t('product.maxStock', { n: product.stock })}</p>}
+          <div className="mt-4 flex items-baseline justify-between border-t border-navy/[0.07] pt-3">
+            <span className="text-[13px] font-extrabold uppercase tracking-wider text-stone">{t('product.total')}</span>
+            <span data-testid="total-price" className="text-[20px] font-extrabold tabular-nums">
+              {formatUZS(product.price * qty)}
+            </span>
+          </div>
         </div>
 
         <h2 className="mt-7 text-[19px]">{t('product.description')}</h2>
@@ -242,39 +249,31 @@ export function Product() {
         </Section>
       )}
 
-      {/* Replaces the tab bar on this screen: price total + the two purchase actions */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3" style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }} data-testid="action-bar">
-        <div className="glass-nav w-full max-w-[480px] rounded-[28px] p-3">
-          <div className="mb-2.5 flex items-baseline justify-between px-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-stone">{t('product.total')}</span>
-            <span data-testid="total-price" className="text-[18px] font-extrabold tabular-nums">
-              {formatUZS(product.price * qty)}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              data-testid="add-to-cart"
-              onClick={addToCart}
-              disabled={out}
-              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-navy px-2 py-3.5 text-[12.5px] font-bold text-white transition active:scale-[0.97] disabled:opacity-40"
-            >
-              <ShoppingBag className="size-4 max-[339px]:hidden" />
-              {t('product.addToCart')}
-            </button>
-            <button
-              type="button"
-              data-testid="quick-order"
-              onClick={quickOrder}
-              disabled={out}
-              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-coral px-2 py-3.5 text-[12.5px] font-bold text-white shadow-[0_10px_22px_-8px_rgba(217,75,89,0.7)] transition active:scale-[0.97] disabled:opacity-40 disabled:shadow-none"
-            >
-              <Zap className="size-4 max-[339px]:hidden" fill="currentColor" />
-              {t('nav.quick')}
-            </button>
-          </div>
+      {/* Separate action panel ABOVE the five-item tab bar (the tab bar stays visible on this screen) */}
+      <DockPanel>
+        <div data-testid="action-bar" className="glass-nav grid grid-cols-2 gap-2.5 rounded-[28px] p-2.5">
+          <button
+            type="button"
+            data-testid="add-to-cart"
+            onClick={addToCart}
+            disabled={out}
+            className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-navy px-2 py-3.5 text-[12.5px] font-bold text-white transition active:scale-[0.97] disabled:opacity-40"
+          >
+            <ShoppingBag className="size-4 max-[339px]:hidden" />
+            {t('product.addToCart')}
+          </button>
+          <button
+            type="button"
+            data-testid="quick-order"
+            onClick={quickOrder}
+            disabled={out}
+            className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-coral px-2 py-3.5 text-[12.5px] font-bold text-white shadow-[0_10px_22px_-8px_rgba(217,75,89,0.7)] transition active:scale-[0.97] disabled:opacity-40 disabled:shadow-none"
+          >
+            <Zap className="size-4 max-[339px]:hidden" fill="currentColor" />
+            {t('nav.quick')}
+          </button>
         </div>
-      </div>
+      </DockPanel>
     </div>
   )
 }

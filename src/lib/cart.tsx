@@ -1,17 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getProduct } from '../data/sample'
 import {
-  addLine, cartCount, cartSubtotal, lineKey, qtyOfProduct, removeLine, sanitizeCart, setLineQty,
+  addLine, cartCount, cartSubtotal, changeVariant, lineKey, qtyOfProduct, removeLine, sanitizeCart, setLineQty,
   type AddResult, type CartLine,
 } from './cartLogic'
 
 const CART_KEY = 'aynimo:cart'
 const QUICK_KEY = 'aynimo:quick'
 
-/** The variant chosen for Quick Order. Independent from the cart (the order form arrives in Phase 4). */
+/** The variant chosen for Quick Order. Independent from the cart. `size` is null until the customer picks one. */
 export interface QuickItem {
   productId: string
-  size: string
+  size: string | null
   color: string
   qty: number
 }
@@ -24,6 +24,8 @@ interface CartCtx {
   add: (line: CartLine) => AddResult
   setQty: (key: string, qty: number) => void
   remove: (key: string) => void
+  clear: () => void
+  changeVariant: (key: string, size: string, color: string) => void
   quick: QuickItem | null
   setQuick: (q: QuickItem | null) => void
 }
@@ -49,9 +51,9 @@ function read(storage: Storage | undefined, key: string): unknown {
 
 function readQuick(): QuickItem | null {
   const r = read(window.sessionStorage, QUICK_KEY) as Partial<QuickItem> | null
-  if (!r || typeof r.productId !== 'string' || typeof r.size !== 'string' || typeof r.color !== 'string' || typeof r.qty !== 'number') return null
+  if (!r || typeof r.productId !== 'string' || (r.size !== null && typeof r.size !== 'string') || typeof r.color !== 'string' || typeof r.qty !== 'number') return null
   const p = getProduct(r.productId)
-  if (!p || !p.active || p.stock <= 0 || !p.sizes.includes(r.size) || !p.colors.some((c) => c.name === r.color)) return null
+  if (!p || !p.active || p.stock <= 0 || (r.size !== null && !p.sizes.includes(r.size)) || !p.colors.some((c) => c.name === r.color)) return null
   return { productId: r.productId, size: r.size, color: r.color, qty: Math.min(Math.max(1, Math.floor(r.qty)), p.stock) }
 }
 
@@ -95,6 +97,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add,
       setQty: (key, qty) => setLines((cur) => setLineQty(cur, key, qty, stockOf)),
       remove: (key) => setLines((cur) => removeLine(cur, key)),
+      clear: () => setLines([]),
+      changeVariant: (key, size, color) => setLines((cur) => changeVariant(cur, key, { size, color }, getProduct)),
       quick,
       setQuick,
     }),

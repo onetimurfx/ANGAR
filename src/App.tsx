@@ -2,16 +2,20 @@ import { useCallback, useEffect } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { BottomNav } from './components/BottomNav'
+import { Dock } from './components/Dock'
 import { EmptyState, PageHeader, primaryBtn } from './components/ui'
 import { Home } from './pages/Home'
 import { Catalog } from './pages/Catalog'
 import { Product } from './pages/Product'
 import { Outfit } from './pages/Outfit'
-import { Cart, QuickOrder } from './pages/Soon'
+import { QuickOrder } from './pages/QuickOrder'
+import { Cart } from './pages/Cart'
+import { Checkout } from './pages/Checkout'
+import { OrderView } from './pages/OrderView'
 import { Profile } from './pages/Profile'
 import { useBackButton } from './lib/telegram'
 import { CartProvider } from './lib/cart'
+import { OrdersProvider } from './lib/ordersStore'
 import { ToastProvider } from './lib/toast'
 import { Compass } from 'lucide-react'
 import { t } from './i18n'
@@ -47,12 +51,11 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
-  // the product screen swaps the tab bar for its own purchase bar (price + add to cart + quick order)
-  const showNav = !location.pathname.startsWith('/mahsulot/')
-
   return (
     <CartProvider>
+    <OrdersProvider>
     <ToastProvider>
+    <Dock>
     <div className="mx-auto min-h-[var(--app-height)] max-w-[520px]">
       <AnimatePresence mode="wait" initial={false}>
         <motion.main
@@ -67,6 +70,8 @@ export default function App() {
             <Route path="/katalog" element={<Catalog />} />
             <Route path="/tezkor-buyurtma" element={<QuickOrder />} />
             <Route path="/savatcha" element={<Cart />} />
+            <Route path="/savatcha/buyurtma" element={<Checkout />} />
+            <Route path="/buyurtma/:id" element={<OrderView />} />
             <Route path="/profil" element={<Profile />} />
             <Route path="/mahsulot/:id" element={<Product />} />
             <Route path="/komplekt/:id" element={<Outfit />} />
@@ -74,9 +79,10 @@ export default function App() {
           </Routes>
         </motion.main>
       </AnimatePresence>
-      {showNav && <BottomNav />}
     </div>
+    </Dock>
     </ToastProvider>
+    </OrdersProvider>
     </CartProvider>
   )
 }

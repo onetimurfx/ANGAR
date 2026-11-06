@@ -68,6 +68,7 @@ async function waitFor(url, ms = 15000) {
 
     // catalog filters
     await page.getByRole('button', { name: 'Poyabzal', exact: true }).click()
+    await page.waitForFunction(() => document.querySelectorAll('a[href*="/mahsulot/"]').length === 2, null, { timeout: 3000 }).catch(() => {})
     const shoeCount = await page.locator('a[href*="/mahsulot/"]').count()
     check(shoeCount === 2, `category filter Poyabzal -> ${shoeCount} products`)
     await page.getByPlaceholder('Mahsulot nomi yoki brend').fill('zzzz')

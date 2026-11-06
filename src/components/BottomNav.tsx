@@ -20,10 +20,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t('nav.label')}
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3"
-      style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
+      className="pointer-events-auto w-full max-w-[440px]"
     >
-      <ul className="glass-nav relative grid w-full max-w-[440px] grid-cols-[1fr_1fr_1.18fr_1fr_1fr] items-end rounded-[30px] px-1 pb-1.5 pt-1.5">
+      <ul className="glass-nav relative grid w-full grid-cols-[1fr_1fr_1.18fr_1fr_1fr] items-end rounded-[30px] px-1 pb-1.5 pt-1.5">
         {ITEMS.map(({ to, key, icon: Icon, end, center }) => (
           <li key={to} className="flex justify-center">
             <NavLink

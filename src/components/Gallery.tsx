@@ -40,7 +40,7 @@ export function Gallery({ categoryId, color, name }: Props) {
               type="button"
               onClick={() => setZoom(true)}
               aria-label={`${t('gallery.open')} (${i + 1}/${COUNT})`}
-              className="relative aspect-[6/7] w-full flex-none snap-center overflow-hidden bg-white"
+              className="relative aspect-square w-full flex-none snap-center overflow-hidden bg-white"
             >
               <ProductImage categoryId={categoryId} color={color} view={i} className="size-full" label={`${name}, ${i + 1}/${COUNT}`} />
             </button>

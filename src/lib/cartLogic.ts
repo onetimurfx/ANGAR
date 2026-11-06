@@ -68,3 +68,35 @@ export function sanitizeCart(raw: unknown, getProduct: (id: string) => Product |
   }
   return out
 }
+
+/**
+ * Changes size/colour of a cart line. If the new variant already exists in the cart the two lines merge.
+ * The total quantity of the product does not change, so stock can never be exceeded by this operation.
+ */
+export function changeVariant(
+  lines: CartLine[],
+  key: string,
+  next: { size: string; color: string },
+  getProduct: (id: string) => Product | undefined,
+): CartLine[] {
+  const target = lines.find((l) => lineKey(l) === key)
+  if (!target) return lines
+  const p = getProduct(target.productId)
+  if (!p || !p.sizes.includes(next.size) || !p.colors.some((c) => c.name === next.color)) return lines
+  const newKey = lineKey({ productId: target.productId, size: next.size, color: next.color })
+  if (newKey === key) return lines
+  const existing = lines.find((l) => lineKey(l) === newKey)
+  const merged: CartLine = { productId: target.productId, size: next.size, color: next.color, qty: target.qty + (existing?.qty ?? 0) }
+  const out: CartLine[] = []
+  let placed = false
+  for (const l of lines) {
+    const k = lineKey(l)
+    if (k === key || k === newKey) {
+      if (!placed) {
+        out.push(merged)
+        placed = true
+      }
+    } else out.push(l)
+  }
+  return out
+}

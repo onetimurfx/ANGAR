@@ -13,7 +13,7 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 | 1 | Project setup, design system | done |
 | 2 | Mini App shell, bottom navigation, homepage | done |
 | 3 | Catalog filters/sorting, product details, cart state | done |
-| 4 | Quick Order, cart | planned |
+| 4 | Quick Order, cart, checkout (device-only drafts) | done |
 | 5 | Supabase database, storage | planned |
 | 6 | Admin dashboard, orders | planned |
 | 7 | Telegram bot | planned |
@@ -22,8 +22,9 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 
 **Everything shown in the app is temporary sample data** (`src/data/sample.ts`): names, prices, stock and the vector product
 illustrations are placeholders and every product card is marked `NAMUNA`. There is **no backend yet**: nothing is saved
-on a server, and no order can be placed. The cart (localStorage) and the Quick Order selection (sessionStorage) already work
-on the device, but the checkout / order form is an explicit "coming in phase 4" notice.
+on a server, and **no order can be sent to the shop**. Quick Order and the cart produce an *order draft* that is stored only in
+this browser (`localStorage`). Every screen says so ("Do'konga YUBORILMADI"); the draft carries a local reference
+`LOC-…` that is not an AYNIMO order number. The server submit arrives in Phase 5.
 
 ## Navigation
 
@@ -56,12 +57,31 @@ Outside Telegram the app opens in *preview mode* (the Telegram script is optiona
 `expand()`, sets header/background colours, syncs the stable viewport height, honours safe-area insets and shows the native
 BackButton on inner screens.
 
+## Phase 4 features
+
+- **Navigation on every screen:** the five-item bar is always visible, including on product pages. Purchase panels (product,
+  cart) are a separate glass panel stacked *above* the bar (`Dock`), so they can never cover it.
+- **Quick Order:** product picker (in-stock only), colour, size, quantity (capped at stock), full name, phone, delivery
+  address, optional comment. Required fields, phone format (Uzbekistan numbers) and stock are validated; focus moves to the
+  first invalid field. Independent from the cart.
+- **Cart:** change size/colour (identical variants merge), quantity, remove, subtotal, delivery and final total, checkout form.
+- **Delivery fee** is *not configured* by default (the business has not provided it): the UI says "Hali belgilanmagan" and the
+  total excludes delivery. Set `VITE_DELIVERY_FEE` (UZS, 0 = free) and optionally `VITE_DELIVERY_FREE_FROM` at build time;
+  Phase 6 moves this setting into the admin panel / database (`src/lib/delivery.ts`).
+- **Duplicate protection:** each submit attempt has an idempotency key (the draft `id`) kept in `sessionStorage`; double taps,
+  retries and re-submits resolve to the same single draft. The same key is what the server will use in Phase 5.
+- **Persistence:** cart, form text and saved drafts survive reloads; a saved draft is listed in Profile and can be deleted
+  (with confirmation). Typed form data is cleared after saving.
+- **Honest status:** confirmation screens and Profile show "Yuborilmagan" / "Do'konga YUBORILMADI" - never "confirmed".
+
 ## Tests
 
-- `npm test` – 33 unit tests (Vitest) for filtering, sorting, URL state, cart rules and storage sanitising.
+- `npm test` – 58 unit tests (Vitest) for filtering, sorting, URL state, cart rules and storage sanitising.
 - `npm run test:e2e` – Chrome end-to-end suites against the production build at phone sizes (320–430 px):
   - `smoke.cjs` (phases 1–2): navigation order and Coral Red centre button, homepage sections, routing, Telegram hash
     parameters, overflow, console errors.
+  - `phase4.cjs`: nav on every screen, Quick Order validation/double tap/idempotency, cart change/remove/totals, checkout,
+    "not sent" wording, persistence, Telegram identity mock, layouts at 320/360/390/430 px, no favorites.
   - `phase3.cjs`: every filter, sorting, gallery/lightbox, selection rules, stock limits, cart, Quick Order hand-off,
     absence of favorites text, layout checks at 320/360/390/430 px. Screenshots go to `tests/e2e/shots/` (git-ignored).
 

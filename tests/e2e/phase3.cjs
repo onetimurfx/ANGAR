@@ -264,7 +264,8 @@ async function waitFor(url, ms = 15000) {
 
     // validation: size required (both buttons)
     check(await page.getByTestId('action-bar').isVisible(), 'purchase bar visible on product screen')
-    eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).count(), 0, 'tab bar replaced by the purchase bar on product screen')
+    eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).locator('a').evaluateAll((a) => a.map((x) => x.getAttribute('aria-label'))), ['Asosiy', 'Katalog', 'Tezkor buyurtma', 'Savatcha', 'Profil'], 'all five tab-bar items stay visible on the product screen')
+    check(await page.evaluate(() => { const p = document.querySelector('[data-testid="action-bar"]').getBoundingClientRect(); const n = document.querySelector('nav[aria-label="Asosiy navigatsiya"] ul').getBoundingClientRect(); return p.bottom <= n.top + 0.5 && n.bottom <= innerHeight + 1 }), 'purchase panel sits above the tab bar without overlapping it')
     await page.getByTestId('add-to-cart').click()
     check(await page.getByRole('alert').filter({ hasText: "o'lchamni tanlang" }).isVisible(), 'Add to cart without size shows an error')
     eq((await cart()).length, 0, 'nothing added without a size')
@@ -384,7 +385,7 @@ async function waitFor(url, ms = 15000) {
     await qi.waitFor({ timeout: 3000 })
     const qt = await qi.innerText()
     check(qt.includes('Yengil kurtka') && qt.includes('L') && qt.includes('2'), 'quick order shows the selected variant')
-    check(qt.includes('1 780 000'), 'quick order total = 2 x 890 000')
+    check((await page.getByTestId('cart-total').innerText()).includes('1 780 000'), 'quick order total = 2 x 890 000')
     await shot('15-quick-order')
     eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).locator('a').count(), 5, 'five-item tab bar on Quick Order screen')
     eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).locator('a').evaluateAll((a) => a.map((x) => x.getAttribute('aria-label'))), ['Asosiy', 'Katalog', 'Tezkor buyurtma', 'Savatcha', 'Profil'], 'nav order unchanged')
@@ -393,7 +394,7 @@ async function waitFor(url, ms = 15000) {
     check(await page.getByTestId('quick-item').isVisible(), 'quick selection survives reload (session)')
     await page.evaluate(() => sessionStorage.setItem('aynimo:quick', '{"productId":"s-dress-2","size":"M","color":"Qora","qty":1}'))
     await page.reload({ waitUntil: 'networkidle' })
-    check(await page.getByRole('heading', { name: 'Mahsulot tanlanmagan' }).isVisible(), 'invalid/out-of-stock quick selection is rejected')
+    eq(await page.getByTestId('quick-item').count(), 0, 'invalid/out-of-stock quick selection is rejected')
 
     // ======================================================= NO FAVORITES ANYWHERE
     for (const route of ['/', '/katalog', '/mahsulot/s-tee-1', '/savatcha', '/tezkor-buyurtma', '/profil']) {
@@ -424,14 +425,15 @@ async function waitFor(url, ms = 15000) {
         }
         if (route === '/mahsulot/s-hoodie-1') {
           const r = await page.evaluate(() => {
-            const bar = document.querySelector('[data-testid="action-bar"] > div').getBoundingClientRect()
+            const bar = document.querySelector('[data-testid="action-bar"]').getBoundingClientRect()
+            const nav = document.querySelector('nav[aria-label="Asosiy navigatsiya"] ul').getBoundingClientRect()
             const [a, b] = [...document.querySelectorAll('[data-testid="add-to-cart"],[data-testid="quick-order"]')]
             const A = a.getBoundingClientRect(), B = b.getBoundingClientRect()
             const clipped = [a, b].some((el) => el.scrollWidth > el.clientWidth + 1)
             const wrapped = [a, b].some((el) => el.getBoundingClientRect().height > 58)
-            return { inView: bar.bottom <= innerHeight + 1 && bar.left >= 0 && bar.right <= innerWidth, overlap: A.right > B.left + 0.5, clipped, wrapped }
+            return { inView: bar.bottom <= nav.top + 0.5 && nav.bottom <= innerHeight + 1 && bar.left >= 0 && bar.right <= innerWidth && nav.left >= 0 && nav.right <= innerWidth, overlap: A.right > B.left + 0.5, clipped, wrapped }
           })
-          check(r.inView && !r.overlap && !r.clipped && !r.wrapped, `purchase bar fits at ${w}px (in view, buttons separate, labels on one line)`)
+          check(r.inView && !r.overlap && !r.clipped && !r.wrapped, `purchase panel + tab bar fit at ${w}px (stacked, in view, buttons separate, labels on one line)`)
         }
       }
       // filter sheet fits the viewport and keeps its apply button reachable
