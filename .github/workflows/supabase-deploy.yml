@@ -18,9 +18,29 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      # Pinned version (no "latest" lookup, which is what returned HTTP 504) + up to 3 install attempts.
+      - name: Install Supabase CLI (attempt 1)
+        id: cli1
+        uses: supabase/setup-cli@v1
+        continue-on-error: true
         with:
-          version: latest
+          version: 2.122.1
+      - name: Wait before retry
+        if: steps.cli1.outcome == 'failure'
+        run: sleep 30
+      - name: Install Supabase CLI (attempt 2)
+        id: cli2
+        if: steps.cli1.outcome == 'failure'
+        uses: supabase/setup-cli@v1
+        continue-on-error: true
+        with:
+          version: 2.122.1
+      - name: Install Supabase CLI (attempt 3, npm fallback)
+        if: steps.cli1.outcome == 'failure' && steps.cli2.outcome == 'failure'
+        run: |
+          for i in 1 2 3; do npm install --global supabase@2.122.1 && break; echo "retry $i"; sleep 20; done
+      - name: Check CLI
+        run: supabase --version
       - run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
       - run: supabase db push
       - run: supabase functions deploy --no-verify-jwt
