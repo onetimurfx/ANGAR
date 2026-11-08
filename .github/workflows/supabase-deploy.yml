@@ -41,6 +41,28 @@ jobs:
           for i in 1 2 3; do npm install --global supabase@2.122.1 && break; echo "retry $i"; sleep 20; done
       - name: Check CLI
         run: supabase --version
-      - run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-      - run: supabase db push
-      - run: supabase functions deploy --no-verify-jwt
+      # GitHub runners have IPv4 only, but the direct database host (db.<ref>.supabase.co) is IPv6-only.
+      # `supabase link` (CLI >= 1.136.3, needs SUPABASE_ACCESS_TOKEN) stores the IPv4-capable pooler address in
+      # supabase/.temp/pooler-url, and `db push --linked` then connects through it. The DB password is read from
+      # the SUPABASE_DB_PASSWORD env var (never passed on the command line, never printed).
+      - name: Link project (IPv4 pooler)
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          for i in 1 2 3; do
+            supabase link --project-ref "$SUPABASE_PROJECT_REF" && break
+            [ "$i" = 3 ] && exit 1
+            echo "link failed, retry $i"; sleep 15
+          done
+      - name: Check the IPv4 pooler is configured
+        run: |
+          if [ ! -s supabase/.temp/pooler-url ]; then
+            echo "::error::supabase link did not store a pooler URL, so the database cannot be reached over IPv4. Check SUPABASE_ACCESS_TOKEN / SUPABASE_PROJECT_REF."
+            exit 1
+          fi
+          # print the host only; the user part is dropped on purpose
+          echo "pooler host: $(sed -E 's#^[a-z]+://[^@]*@##; s#/.*$##' supabase/.temp/pooler-url)"
+      - name: Apply migrations
+        run: supabase db push --linked
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --no-verify-jwt
