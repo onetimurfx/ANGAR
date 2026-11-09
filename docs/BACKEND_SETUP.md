@@ -46,3 +46,29 @@ Without steps 1-6 the app runs in **demo mode**: sample catalog, orders are *not
 
 `npm test` (unit + secret scan) - `npm run test:db` (real PostgreSQL: migrations, RLS, SQL functions, Edge Function handlers) -
 `node tests/e2e/live.cjs` (browser against a real DB + the real handlers; only Telegram's Bot API is faked) - `npm run test:e2e`.
+
+## Quick Order (store pickup): bot messages and the pickup-sweep cron (Phase 6, stage C)
+
+Nothing here is active until the owner runs it. The stage-A/C migrations and the cron script are **not** applied automatically.
+
+**What runs every minute.** `pickup-sweep` (Edge Function) does two things: (1) `sweep_pickup()` expires `pending` orders older than 30 minutes
+and `ready_for_pickup` orders older than 24 hours, releases their reservations and queues a customer message; `preparing` orders are never
+touched; (2) sends / retries the queued Telegram messages (`pickup_outbox`, up to 6 attempts with growing delay, each message sent once).
+It writes `job_heartbeats('pickup-sweep')`. New orders and status changes also try to send their messages immediately; the cron is the safety net.
+
+**Secrets (never in Git, the frontend or logs).** `BOT_TOKEN` and `CRON_SECRET` live only in *Edge Functions > Secrets*. Because SQL cannot read
+Edge Function secrets, the cron secret is stored a second time in **Vault**, typed in the dashboard (not in SQL):
+
+1. Edge Functions > Secrets: `CRON_SECRET` = a random 32+ character value (the same one used for `notify-outbox`).
+2. Integrations > Vault > Add secret: name `aynimo_cron_secret`, value = the **same** `CRON_SECRET`.
+3. Integrations > Vault > Add secret: name `aynimo_project_url`, value = `https://<project-ref>.supabase.co`.
+4. After migrations are applied and `pickup-sweep` is deployed, open `supabase/ops/cron_pickup.sql` in the SQL editor and run it once
+   (it refuses to schedule if a Vault secret is missing, and can be re-run safely).
+
+**Checking that it works.** Run `supabase/ops/cron_pickup_check.sql` (read-only, prints no secret): the job must be `active`, runs `succeeded`,
+`net._http_response` must show `200` (`401` = Vault value differs from `CRON_SECRET`, `404` = function not deployed) and the heartbeat status `ok`.
+
+**How a stopped cron is detected.** `pickup_health` (admin only, `GET admin-pickup?view=health`) returns `healthy:false` when the heartbeat is
+`never` (not installed), `stale` (no run for 3+ minutes) or `failing` (the sweep raises; the failure is recorded), or when open orders are more
+than 2 minutes past their deadline. The admin panel (stage E) shows a banner from this. Even with cron down, an expired reservation stops
+blocking stock because availability ignores expired reservations.

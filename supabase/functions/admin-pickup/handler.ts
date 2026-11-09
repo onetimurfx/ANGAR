@@ -1,5 +1,6 @@
 import { fail, json, readJson, requireAdmin, route } from '../_shared/http.ts'
 import { mapDbError, UUID_RE, type ErrorTable } from '../_shared/dbErrors.ts'
+import { deliverInBackground } from '../_shared/pickupNotify.ts'
 import type { Deps } from '../_shared/types.ts'
 
 const ERRORS: ErrorTable = {
@@ -28,6 +29,7 @@ const GROUPS = new Set(['active', 'pending', 'preparing', 'ready', 'history'])
  *
  *   GET ?group=active|pending|preparing|ready|history[&limit=n]  -> { orders, counts, sweep }
  *   GET ?id=<uuid>                                               -> { order, history }
+ *   GET ?view=health                                             -> { healthy, sweep, overdue, outbox }  (cron monitoring)
  *   POST { action:'start_preparing', id }
  *   POST { action:'mark_ready', id }
  *   POST { action:'cancel', id, reason }                         reason is mandatory
@@ -45,6 +47,10 @@ export const handler = (deps: Deps) =>
     try {
       if (req.method === 'GET') {
         const q = new URL(req.url).searchParams
+        if (q.get('view') === 'health') {
+          const [h] = await deps.sql`select public.pickup_health(${admin}::bigint) as r`
+          return json(req, deps, 200, h.r)
+        }
         const id = q.get('id')
         if (id !== null) {
           if (!UUID_RE.test(id)) return fail(req, deps, 400, 'INVALID_REQUEST')
@@ -69,16 +75,19 @@ export const handler = (deps: Deps) =>
         case 'start_preparing': {
           if (!id) return fail(req, deps, 400, 'INVALID_REQUEST')
           const [r] = await deps.sql`select public.admin_start_preparing(${admin}::bigint, ${id}::uuid) as r`
+          deliverInBackground(deps)
           return json(req, deps, 200, { order: r.r })
         }
         case 'mark_ready': {
           if (!id) return fail(req, deps, 400, 'INVALID_REQUEST')
           const [r] = await deps.sql`select public.admin_mark_ready(${admin}::bigint, ${id}::uuid) as r`
+          deliverInBackground(deps)
           return json(req, deps, 200, { order: r.r })
         }
         case 'cancel': {
           if (!id || typeof b.reason !== 'string') return fail(req, deps, 400, 'INVALID_REQUEST')
           const [r] = await deps.sql`select public.admin_cancel_pickup(${admin}::bigint, ${id}::uuid, ${b.reason}) as r`
+          deliverInBackground(deps)
           return json(req, deps, 200, { order: r.r })
         }
         case 'complete': {
@@ -93,6 +102,7 @@ export const handler = (deps: Deps) =>
             const f = COMPLETE_FAILURES[out.error ?? ''] ?? [500, 'SERVER_ERROR']
             return fail(req, deps, f[0], f[1])
           }
+          deliverInBackground(deps)
           return json(req, deps, 200, { order: out.order })
         }
         default:

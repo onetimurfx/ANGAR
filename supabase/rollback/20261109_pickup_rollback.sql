@@ -216,7 +216,8 @@ revoke all on function public.place_order(uuid, uuid, text, text, text, text, te
 grant execute on function public.place_order(uuid, uuid, text, text, text, text, text, jsonb) to service_role;
 
 -- 2. drop the pickup objects (all empty at this point)
-drop function public.claim_pickup_outbox(integer), public.finish_pickup_outbox(bigint, boolean, text),
+drop function public.pickup_sweep_failed(text), public.pickup_health(bigint),
+  public.claim_pickup_outbox(integer), public.finish_pickup_outbox(bigint, boolean, text),
   public.sweep_pickup(), public.admin_complete_pickup(bigint, uuid, text, boolean, bigint),
   public.admin_cancel_pickup(bigint, uuid, text), public.admin_mark_ready(bigint, uuid),
   public.admin_start_preparing(bigint, uuid), public.admin_get_pickup(bigint, uuid),

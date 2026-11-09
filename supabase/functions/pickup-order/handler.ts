@@ -1,5 +1,6 @@
 import { fail, json, readJson, requireSession, route } from '../_shared/http.ts'
 import { mapDbError, UUID_RE, type ErrorTable } from '../_shared/dbErrors.ts'
+import { deliverInBackground } from '../_shared/pickupNotify.ts'
 import type { Deps } from '../_shared/types.ts'
 
 const ERRORS: ErrorTable = {
@@ -53,6 +54,7 @@ export const handler = (deps: Deps) =>
       if (b.action === 'cancel') {
         if (typeof b.id !== 'string' || !UUID_RE.test(b.id)) return fail(req, deps, 400, 'INVALID_REQUEST')
         const [r] = await deps.sql`select public.cancel_pickup_order_customer(${customer}::uuid, ${b.id}::uuid) as o`
+        deliverInBackground(deps)
         return json(req, deps, 200, { order: r.o })
       }
 
@@ -65,6 +67,7 @@ export const handler = (deps: Deps) =>
       const [r] = await deps.sql`select public.place_pickup_order(${customer}::uuid, ${b.idempotencyKey}::uuid, ${str(c.name)}, ${str(c.phone)},
         ${str(c.comment) || null}, ${JSON.stringify(b.items ?? null)}::text::jsonb) as r`
       const result = r.r as { duplicate: boolean; order: unknown }
+      if (!result.duplicate) deliverInBackground(deps)
       return json(req, deps, result.duplicate ? 200 : 201, result)
     } catch (e) {
       const mapped = mapDbError(req, deps, e, ERRORS)
