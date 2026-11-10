@@ -34,7 +34,7 @@ export function readBackendConfig(env: Record<string, string | undefined>): Back
 }
 
 /** What went wrong, in terms the UI can explain (see i18n err.*). */
-export type ErrorKind = 'offline' | 'timeout' | 'server' | 'auth' | 'not_in_telegram' | 'rate_limit' | 'invalid' | 'conflict' | 'format' | 'misconfigured'
+export type ErrorKind = 'offline' | 'timeout' | 'server' | 'auth' | 'not_in_telegram' | 'rate_limit' | 'invalid' | 'conflict' | 'format' | 'misconfigured' | 'unavailable'
 
 export class BackendError extends Error {
   constructor(
@@ -49,6 +49,9 @@ export class BackendError extends Error {
 
 function kindFor(status: number, code: string): ErrorKind {
   if (code === 'SERVER_MISCONFIGURED') return 'misconfigured'
+  // Supabase answers a function that is not deployed with 404 and NO {error:{code}} envelope (code falls back to HTTP_404);
+  // our own functions always answer with the envelope, so this is "the service is not switched on yet", not "order not found"
+  if (status === 404 && code.startsWith('HTTP_')) return 'unavailable'
   if (status === 401 || status === 403) return 'auth'
   if (status === 429) return 'rate_limit'
   if (status === 409) return 'conflict'
@@ -65,8 +68,16 @@ export interface CartItem {
 
 export interface PlaceOrderRequest {
   idempotencyKey: string
-  source: 'quick' | 'cart'
+  /** the Cart only: Quick Order is store pickup now (see pickupPlace) */
+  source: 'cart'
   contact: { name: string; phone: string; address: string; comment: string }
+  items: CartItem[]
+}
+
+/** Quick Order = store pickup. No address, no delivery: name + phone (required) and an optional comment. */
+export interface PickupPlaceRequest {
+  idempotencyKey: string
+  contact: { name: string; phone: string; comment: string }
   items: CartItem[]
 }
 
@@ -167,6 +178,25 @@ export function createBackend(o: BackendOptions) {
     placeOrder: async (req: PlaceOrderRequest): Promise<{ duplicate: boolean; order: unknown }> => {
       const r = await call('place-order', 'POST', req)
       return { duplicate: r.duplicate === true, order: r.order }
+    },
+    // ---- Quick Order (store pickup). Identity always comes from the signed session, never from these arguments.
+    pickupOrders: async (): Promise<unknown[]> => {
+      const r = await call('pickup-order', 'GET')
+      if (!Array.isArray(r.orders)) throw new BackendError('server', 'BAD_RESPONSE')
+      return r.orders
+    },
+    pickupOrder: async (id: string): Promise<unknown> => {
+      const r = await call(`pickup-order?id=${encodeURIComponent(id)}`, 'GET')
+      if (!r.order || typeof r.order !== 'object') throw new BackendError('server', 'BAD_RESPONSE')
+      return r.order
+    },
+    pickupPlace: async (req: PickupPlaceRequest): Promise<{ duplicate: boolean; order: unknown }> => {
+      const r = await call('pickup-order', 'POST', { action: 'place', ...req })
+      return { duplicate: r.duplicate === true, order: r.order }
+    },
+    pickupCancel: async (id: string): Promise<unknown> => {
+      const r = await call('pickup-order', 'POST', { action: 'cancel', id })
+      return r.order
     },
   }
 }

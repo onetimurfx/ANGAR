@@ -381,20 +381,20 @@ async function waitFor(url, ms = 15000) {
     await page.getByRole('button', { name: 'Miqdorni oshirish' }).click()
     await page.getByTestId('quick-order').click()
     await page.waitForURL(/\/tezkor-buyurtma/)
-    const qi = page.getByTestId('quick-item')
-    await qi.waitFor({ timeout: 3000 })
-    const qt = await qi.innerText()
-    check(qt.includes('Yengil kurtka') && qt.includes('L') && qt.includes('2'), 'quick order shows the selected variant')
+    const ql = page.getByTestId('quick-line')
+    await ql.first().waitFor({ timeout: 3000 })
+    const qt = await ql.first().innerText()
+    check(qt.includes('Yengil kurtka') && qt.includes('L') && qt.includes('2'), 'quick order basket shows the selected variant')
     check((await page.getByTestId('cart-total').innerText()).includes('1 780 000'), 'quick order total = 2 x 890 000')
     await shot('15-quick-order')
     eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).locator('a').count(), 5, 'five-item tab bar on Quick Order screen')
     eq(await page.getByRole('navigation', { name: 'Asosiy navigatsiya' }).locator('a').evaluateAll((a) => a.map((x) => x.getAttribute('aria-label'))), ['Asosiy', 'Katalog', 'Tezkor buyurtma', 'Savatcha', 'Profil'], 'nav order unchanged')
     eq((await page.getByTestId('nav-cart-badge').innerText()).trim(), badgeBefore, 'Quick Order does not touch the cart')
     await page.reload({ waitUntil: 'networkidle' })
-    check(await page.getByTestId('quick-item').isVisible(), 'quick selection survives reload (session)')
-    await page.evaluate(() => sessionStorage.setItem('aynimo:quick', '{"productId":"s-dress-2","size":"M","color":"Qora","qty":1}'))
+    check(await page.getByTestId('quick-line').first().isVisible(), 'quick basket survives reload (session)')
+    await page.evaluate(() => sessionStorage.setItem('aynimo:quick-basket', '[{"productId":"s-dress-2","size":"M","color":"Qora","qty":1},{"productId":"nope","size":"M","color":"Qora","qty":1}]'))
     await page.reload({ waitUntil: 'networkidle' })
-    eq(await page.getByTestId('quick-item').count(), 0, 'invalid/out-of-stock quick selection is rejected')
+    eq(await page.getByTestId('quick-line').count(), 0, 'invalid/out-of-stock basket lines are rejected')
 
     // ======================================================= NO FAVORITES ANYWHERE
     for (const route of ['/', '/katalog', '/mahsulot/s-tee-1', '/savatcha', '/tezkor-buyurtma', '/profil']) {
@@ -405,7 +405,7 @@ async function waitFor(url, ms = 15000) {
 
     // ======================================================= MOBILE SIZES
     await page.evaluate(() => localStorage.setItem('aynimo:cart', JSON.stringify([{ productId: 's-hoodie-1', size: 'M', color: 'Marjon', qty: 2 }, { productId: 's-jacket-1', size: 'L', color: 'Qora', qty: 1 }])))
-    await page.evaluate(() => sessionStorage.setItem('aynimo:quick', '{"productId":"s-jacket-1","size":"L","color":"Qora","qty":2}'))
+    await page.evaluate(() => sessionStorage.setItem('aynimo:quick-basket', '[{"productId":"s-jacket-1","size":"L","color":"Qora","qty":2}]'))
     for (const [w, h] of [[320, 568], [360, 740], [390, 844], [430, 932]]) {
       await page.setViewportSize({ width: w, height: h })
       for (const route of ['/katalog', '/katalog?brand=aynimo&size=M&color=Marjon&sort=price_asc', '/mahsulot/s-hoodie-1', '/mahsulot/s-dress-2', '/savatcha', '/tezkor-buyurtma']) {

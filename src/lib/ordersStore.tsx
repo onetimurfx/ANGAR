@@ -93,8 +93,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       const { errors, value } = validateContact(input.contact)
       if (!value) return { ok: false, reason: 'contact', errors }
       if (input.lines.length === 0) return { ok: false, reason: 'empty' }
+      // Quick Order is store pickup (pickupStore); only the Cart may use this endpoint
+      if (input.source !== 'cart') return { ok: false, reason: 'error', kind: 'invalid', code: 'QUICK_ORDER_MOVED' }
       try {
-        const res = await backend!.placeOrder({ idempotencyKey: input.attemptId, source: input.source, contact: value, items: input.lines })
+        const res = await backend!.placeOrder({ idempotencyKey: input.attemptId, source: 'cart', contact: value, items: input.lines })
         const order = fromServerOrder(res.order)
         if (!order) return { ok: false, reason: 'error', kind: 'format', code: 'BAD_ORDER' }
         const next = [order, ...ref.current.filter((o) => o.id !== order.id)]

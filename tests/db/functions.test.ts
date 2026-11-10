@@ -70,7 +70,7 @@ async function login(tg: number) {
 }
 const orderBody = (over: Record<string, unknown> = {}) => ({
   idempotencyKey: randomUUID(),
-  source: 'quick',
+  source: 'cart',
   contact: CONTACT,
   items: [{ productId: 'P1', size: 'M', color: 'Qora', qty: 2 }],
   ...over,

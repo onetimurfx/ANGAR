@@ -17,6 +17,9 @@ import { handler as cartHandler } from '../../supabase/functions/cart/handler.ts
 import { handler as ordersHandler } from '../../supabase/functions/my-orders/handler.ts'
 import { handler as placeHandler } from '../../supabase/functions/place-order/handler.ts'
 import { handler as outboxHandler } from '../../supabase/functions/notify-outbox/handler.ts'
+import { handler as pickupHandler } from '../../supabase/functions/pickup-order/handler.ts'
+import { handler as adminPickupHandler } from '../../supabase/functions/admin-pickup/handler.ts'
+import { handler as sweepHandler } from '../../supabase/functions/pickup-sweep/handler.ts'
 
 export const BOT_TOKEN = '7000000001:AAFakeTokenForE2eOnly_abcdefghijklmnopqrstu'
 const SESSION_SECRET = 'e2e-session-secret-0123456789-abcdefghijklmnopqrstuvwxyz'
@@ -73,6 +76,7 @@ const deps = (): Deps => ({
 })
 const FUNCTIONS: Record<string, (d: Deps) => (r: Request) => Promise<Response>> = {
   'telegram-auth': authHandler, 'admin-whoami': adminHandler, cart: cartHandler, 'my-orders': ordersHandler, 'place-order': placeHandler, 'notify-outbox': outboxHandler,
+  'pickup-order': pickupHandler, 'admin-pickup': adminPickupHandler, 'pickup-sweep': sweepHandler,
 }
 
 const readBody = (req: IncomingMessage) => new Promise<Buffer>((res) => { const c: Buffer[] = []; req.on('data', (d) => c.push(d)); req.on('end', () => res(Buffer.concat(c))) })
@@ -101,7 +105,7 @@ const api = createServer(async (req, res) => {
       const body = await readBody(req)
       const headers = new Headers()
       for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v)
-      const r = new Request(`https://x.supabase.co${url.pathname}`, { method: req.method, headers, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body })
+      const r = new Request(`https://x.supabase.co${url.pathname}${url.search}`, { method: req.method, headers, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body })
       const out = await h(deps())(r)
       const h2: Record<string, string> = {}
       out.headers.forEach((v, k) => (h2[k] = v))
@@ -119,7 +123,9 @@ const api = createServer(async (req, res) => {
         const stock = await sql`select p.product_id, p.size, p.color_name, i.quantity from product_variants p join inventory i on i.variant_id = p.id order by 1, 2, 3`
         const cart = await sql`select product_id, size, color_name, qty from cart_items order by 1, 2`
         const outbox = await sql`select kind, status, attempts from notification_outbox order by id`
-        return send(res, 200, { orders, stock, cart, telegram, outbox, customers: (await sql`select count(*)::int n from customers`)[0].n }, cors)
+        const pickup = await sql`select id, order_number, status, total, payment_status, pickup_code from pickup_orders order by created_at`
+        const reservations = await sql`select status, qty from stock_reservations order by created_at`
+        return send(res, 200, { orders, stock, cart, telegram, outbox, pickup, reservations, customers: (await sql`select count(*)::int n from customers`)[0].n }, cors)
       }
       if (op === 'set-stock') { await sql`update inventory set quantity = ${Number(q('qty'))} where variant_id = (select id from product_variants where product_id = ${q('product')} and size = ${q('size')} and color_name = ${q('color')})`; return send(res, 200, { ok: true }, cors) }
       if (op === 'delivery') { await sql`update settings set delivery_fee = ${q('fee') === '' ? null : Number(q('fee'))}, delivery_free_from = ${q('free') === '' ? null : Number(q('free'))}`; return send(res, 200, { ok: true }, cors) }
@@ -127,6 +133,8 @@ const api = createServer(async (req, res) => {
       if (op === 'deactivate') { await sql`update products set active = false where id = ${q('product')}`; return send(res, 200, { ok: true }, cors) }
       if (op === 'fail') { inject.fail = Number(q('n') || 1); return send(res, 200, { ok: true }, cors) }
       if (op === 'reset-telegram') { telegram.length = 0; return send(res, 200, { ok: true }, cors) }
+      if (op === 'clear-cart') { await sql`truncate cart_items`; return send(res, 200, { ok: true }, cors) }
+      if (op === 'reset-pickup') { await sql`truncate pickup_orders, pickup_outbox restart identity cascade`; telegram.length = 0; return send(res, 200, { ok: true }, cors) }
       if (op === 'reset-orders') { await sql`truncate orders, cart_items, notification_outbox restart identity cascade`; telegram.length = 0; return send(res, 200, { ok: true }, cors) }
       return send(res, 404, { error: 'unknown test op' }, cors)
     }

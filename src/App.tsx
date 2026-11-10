@@ -12,10 +12,13 @@ import { QuickOrder } from './pages/QuickOrder'
 import { Cart } from './pages/Cart'
 import { Checkout } from './pages/Checkout'
 import { OrderView } from './pages/OrderView'
+import { PickupOrderView } from './pages/PickupOrderView'
 import { Profile } from './pages/Profile'
 import { useBackButton } from './lib/telegram'
 import { CartProvider } from './lib/cart'
 import { OrdersProvider } from './lib/ordersStore'
+import { QuickProvider } from './lib/quick'
+import { PickupProvider } from './lib/pickupStore'
 import { ToastProvider } from './lib/toast'
 import { Compass } from 'lucide-react'
 import { t } from './i18n'
@@ -54,6 +57,8 @@ export default function App() {
   return (
     <CartProvider>
     <OrdersProvider>
+    <QuickProvider>
+    <PickupProvider>
     <ToastProvider>
     <Dock>
     <div className="mx-auto min-h-[var(--app-height)] max-w-[520px]">
@@ -69,6 +74,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/katalog" element={<Catalog />} />
             <Route path="/tezkor-buyurtma" element={<QuickOrder />} />
+            <Route path="/tezkor-buyurtma/:id" element={<PickupOrderView />} />
             <Route path="/savatcha" element={<Cart />} />
             <Route path="/savatcha/buyurtma" element={<Checkout />} />
             <Route path="/buyurtma/:id" element={<OrderView />} />
@@ -82,6 +88,8 @@ export default function App() {
     </div>
     </Dock>
     </ToastProvider>
+    </PickupProvider>
+    </QuickProvider>
     </OrdersProvider>
     </CartProvider>
   )

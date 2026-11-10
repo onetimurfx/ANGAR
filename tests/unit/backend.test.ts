@@ -125,7 +125,7 @@ describe('backend client', () => {
       return json(409, { error: { code: 'ITEMS_UNAVAILABLE', issues: [{ productId: 'P1', requested: 3, available: 1, reason: 'stock', name: 'X' }] } })
     })
     try {
-      await b.placeOrder({ idempotencyKey: 'k', source: 'quick', contact: { name: '', phone: '', address: '', comment: '' }, items: [] })
+      await b.placeOrder({ idempotencyKey: 'k', source: 'cart', contact: { name: '', phone: '', address: '', comment: '' }, items: [] })
       expect.unreachable()
     } catch (e) {
       const err = e as BackendError

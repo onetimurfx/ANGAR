@@ -12,9 +12,10 @@ const CODES: Record<string, [number, string]> = {
   INVALID_ITEM: [400, 'INVALID_ITEM'],
   INVALID_REQUEST: [400, 'INVALID_REQUEST'],
   UNKNOWN_CUSTOMER: [401, 'UNAUTHENTICATED'],
+  QUICK_ORDER_MOVED: [410, 'QUICK_ORDER_MOVED'],
 }
 
-/** POST { idempotencyKey, source, contact, items } -> creates the order (or returns the existing one for the same key). */
+/** POST { idempotencyKey, source:'cart', contact, items } -> creates the order (or returns the existing one for the same key). */
 export const handler = (deps: Deps) =>
   route(['POST'], deps, async (req) => {
     const s = await requireSession(req, deps)
@@ -22,7 +23,9 @@ export const handler = (deps: Deps) =>
     const body = await readJson(req)
     const b = body.ok ? body.value : null
     if (!b || typeof b !== 'object' || typeof b.idempotencyKey !== 'string' || !UUID.test(b.idempotencyKey)) return fail(req, deps, 400, 'INVALID_REQUEST')
-    if (b.source !== 'quick' && b.source !== 'cart') return fail(req, deps, 400, 'INVALID_REQUEST')
+    // Quick Order is store pickup now (pickup-order function); this endpoint serves the Cart only
+    if (b.source === 'quick') return fail(req, deps, 410, 'QUICK_ORDER_MOVED')
+    if (b.source !== 'cart') return fail(req, deps, 400, 'INVALID_REQUEST')
     const c = b.contact
     if (!c || typeof c !== 'object') return fail(req, deps, 400, 'INVALID_REQUEST')
     const str = (v: unknown) => (typeof v === 'string' ? v : '')

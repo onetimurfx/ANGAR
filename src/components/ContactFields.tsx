@@ -9,6 +9,8 @@ interface Props {
   onBlurField: (field: ContactField) => void
   /** shown under the name when it was prefilled from Telegram */
   nameFromTelegram?: boolean
+  /** store pickup has no delivery address */
+  hideAddress?: boolean
 }
 
 const base = 'w-full rounded-2xl bg-white px-4 py-3.5 text-[16px] outline-none shadow-[0_4px_14px_-10px_rgba(23,43,58,0.6)] transition placeholder:text-stone/80 focus:ring-2'
@@ -39,7 +41,7 @@ function Field({ id, label, optional, error, hint, children }: { id: string; lab
   )
 }
 
-export function ContactFields({ value, errors, onChange, onBlurField, nameFromTelegram }: Props) {
+export function ContactFields({ value, errors, onChange, onBlurField, nameFromTelegram, hideAddress }: Props) {
   const uid = useId().replace(/:/g, '')
   const id = (f: ContactField) => `${uid}-${f}`
   const cls = (f: ContactField) => `${base} ${errors[f] ? 'ring-2 ring-coral focus:ring-coral' : 'focus:ring-coral/60'}`
@@ -81,6 +83,7 @@ export function ContactFields({ value, errors, onChange, onBlurField, nameFromTe
           {...aria('phone')}
         />
       </Field>
+      {!hideAddress && (
       <Field id={id('address')} label={t('form.address')} error={err('address')}>
         <textarea
           id={id('address')}
@@ -97,6 +100,7 @@ export function ContactFields({ value, errors, onChange, onBlurField, nameFromTe
           {...aria('address')}
         />
       </Field>
+      )}
       <Field
         id={id('comment')}
         label={t('form.comment')}

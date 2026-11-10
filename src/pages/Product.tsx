@@ -13,6 +13,7 @@ import { useCatalogVersion } from '../lib/backendContext'
 import { discountPercent, formatUZS } from '../lib/format'
 import { pushRecent } from '../lib/recent'
 import { useCart } from '../lib/cart'
+import { useQuick } from '../lib/quick'
 import { useToast } from '../lib/toast'
 import { haptic } from '../lib/telegram'
 import { t } from '../i18n'
@@ -37,6 +38,7 @@ export function Product() {
   const product = getProduct(id)
   const navigate = useNavigate()
   const cart = useCart()
+  const quick = useQuick()
   const toast = useToast()
 
   const [colorIdx, setColorIdx] = useState(0)
@@ -116,7 +118,12 @@ export function Product() {
   const quickOrder = () => {
     const v = validate()
     if (!v) return
-    cart.setQuick({ productId: product.id, size: v.size, color: color.name, qty })
+    // Quick Order has its own basket (store pickup), separate from the cart
+    const res = quick.add({ productId: product.id, size: v.size, color: color.name, qty })
+    if (!res.ok) {
+      toast.show(res.reason === 'lines' ? t('pickup.maxLines', { n: res.max }) : res.max > 0 ? t('pickup.maxStock', { n: res.max }) : t('pickup.variantGone'), { tone: 'warn' })
+      return
+    }
     haptic()
     navigate('/tezkor-buyurtma')
   }

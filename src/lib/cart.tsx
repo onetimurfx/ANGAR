@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getProduct, variantQty } from '../data/catalog'
+import { getProduct } from '../data/catalog'
 import { backend } from './backend'
 import { useBackend } from './backendContext'
 import {
@@ -8,15 +8,6 @@ import {
 } from './cartLogic'
 
 const CART_KEY = 'aynimo:cart'
-const QUICK_KEY = 'aynimo:quick'
-
-/** The variant chosen for Quick Order. Independent from the cart. `size` is null until the customer picks one. */
-export interface QuickItem {
-  productId: string
-  size: string | null
-  color: string
-  qty: number
-}
 
 interface CartCtx {
   lines: CartLine[]
@@ -30,8 +21,6 @@ interface CartCtx {
   changeVariant: (key: string, size: string, color: string) => void
   /** true while the last attempt to save the cart on the server failed (it is still kept on this device) */
   syncFailed: boolean
-  quick: QuickItem | null
-  setQuick: (q: QuickItem | null) => void
 }
 
 const Ctx = createContext<CartCtx | null>(null)
@@ -53,19 +42,8 @@ function read(storage: Storage | undefined, key: string): unknown {
   }
 }
 
-function readQuick(): QuickItem | null {
-  const r = read(window.sessionStorage, QUICK_KEY) as Partial<QuickItem> | null
-  if (!r || typeof r.productId !== 'string' || (r.size !== null && typeof r.size !== 'string') || typeof r.color !== 'string' || typeof r.qty !== 'number') return null
-  const p = getProduct(r.productId)
-  if (!p || !p.active || p.stock <= 0 || (r.size !== null && !p.sizes.includes(r.size)) || !p.colors.some((c) => c.name === r.color)) return null
-  const cap = r.size === null ? p.stock : variantQty(p, r.size, r.color)
-  if (cap <= 0) return null
-  return { productId: r.productId, size: r.size, color: r.color, qty: Math.min(Math.max(1, Math.floor(r.qty)), cap) }
-}
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>(() => sanitizeCart(read(window.localStorage, CART_KEY), getProduct))
-  const [quick, setQuickState] = useState<QuickItem | null>(readQuick)
   const { mode, auth, version } = useBackend()
   const server = mode === 'server'
   const [syncFailed, setSyncFailed] = useState(false)
@@ -116,16 +94,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [lines])
 
-  const setQuick = useCallback((q: QuickItem | null) => {
-    setQuickState(q)
-    try {
-      if (q) window.sessionStorage.setItem(QUICK_KEY, JSON.stringify(q))
-      else window.sessionStorage.removeItem(QUICK_KEY)
-    } catch {
-      /* ignore */
-    }
-  }, [])
-
   const add = useCallback(
     (line: CartLine): AddResult => {
       const res = addLine(lines, line, stockOf)
@@ -147,10 +115,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clear: () => setLines([]),
       changeVariant: (key, size, color) => setLines((cur) => changeVariant(cur, key, { size, color }, getProduct)),
       syncFailed,
-      quick,
-      setQuick,
     }),
-    [lines, add, quick, setQuick, syncFailed],
+    [lines, add, syncFailed],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

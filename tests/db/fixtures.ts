@@ -64,7 +64,7 @@ export async function placeOrder(
   opts: { key?: string; source?: 'quick' | 'cart'; contact?: Partial<typeof CONTACT> } = {},
 ) {
   const c = { ...CONTACT, ...opts.contact }
-  const [r] = await sql`select place_order(${customer}::uuid, ${opts.key ?? randomUUID()}::uuid, ${opts.source ?? 'quick'},
+  const [r] = await sql`select place_order(${customer}::uuid, ${opts.key ?? randomUUID()}::uuid, ${opts.source ?? 'cart'},
      ${c.name}, ${c.phone}, ${c.address}, ${c.comment}, ${sql.json(items as never)}) as r`
   return r.r as { duplicate: boolean; order: Record<string, any> }
 }

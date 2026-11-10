@@ -72,3 +72,14 @@ Edge Function secrets, the cron secret is stored a second time in **Vault**, typ
 `never` (not installed), `stale` (no run for 3+ minutes) or `failing` (the sweep raises; the failure is recorded), or when open orders are more
 than 2 minutes past their deadline. The admin panel (stage E) shows a banner from this. Even with cron down, an expired reservation stops
 blocking stock because availability ignores expired reservations.
+
+## Quick Order screens and retiring `source='quick'` (Phase 6, stage D)
+
+Quick Order is now store pickup only (own basket, own server tables, no address, no delivery) and is separate from the Cart.
+`place_order` (Cart) accepts `source='cart'` only; `'quick'` is refused with `QUICK_ORDER_MOVED` (HTTP 410 from `place-order`).
+
+**Deploy together, in this order, when the owner decides to go live** (nothing is applied automatically):
+1. apply migrations `…000001` to `…000007` (7 = the `place_order` change), 2. deploy the Edge Functions (`pickup-order`, `admin-pickup`,
+`pickup-sweep`, updated `place-order`), 3. publish the new front-end, 4. install the cron (`supabase/ops/cron_pickup.sql`).
+The Phase 5 front-end still sends `'quick'`, so migration 7 must not go live before the new front-end does. Existing orders created
+with `source='quick'` stay readable.

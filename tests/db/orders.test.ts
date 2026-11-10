@@ -272,9 +272,9 @@ describe('cart on the server', () => {
     await sql`select set_cart(${fx.customer}::uuid, '[]'::jsonb)`
     expect((await sql`select get_cart(${fx.customer}::uuid) as c`)[0].c).toEqual([])
   })
-  it('a cart order empties the cart, a quick order does not', async () => {
+  it('a cart order empties the cart; the retired quick path is refused and leaves the cart alone', async () => {
     await sql`select set_cart(${fx.customer}::uuid, ${sql.json([line('P1', 'M', 'Qora', 1)] as never)})`
-    await placeOrder(sql, fx.customer, [line('P3', 'S', 'Oq', 1)], { source: 'quick' })
+    await expect(placeOrder(sql, fx.customer, [line('P3', 'S', 'Oq', 1)], { source: 'quick' })).rejects.toThrow('QUICK_ORDER_MOVED')
     expect((await sql`select get_cart(${fx.customer}::uuid) as c`)[0].c).toHaveLength(1)
     await placeOrder(sql, fx.customer, [line('P1', 'M', 'Qora', 1)], { source: 'cart' })
     expect((await sql`select get_cart(${fx.customer}::uuid) as c`)[0].c).toEqual([])
