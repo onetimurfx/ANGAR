@@ -2,7 +2,7 @@
 
 ## Principles
 - Telegram Mini App only. No public shop website, no Android/iOS apps.
-- AYNIMO administrators manage all products. No seller registration.
+- ANGAR administrators manage all products. No seller registration.
 - No fake success: until a backend exists, the UI says so instead of pretending.
 
 ## Planned architecture

@@ -21,7 +21,7 @@ export const categories: Category[] = [
 ]
 
 export const brands: Brand[] = [
-  { id: 'aynimo', name: 'AYNIMO Original', type: 'original' },
+  { id: 'aynimo', name: 'ANGAR Original', type: 'original' },
   { id: 'sample-a', name: 'Namuna brend A', type: 'other' },
   { id: 'sample-b', name: 'Namuna brend B', type: 'other' },
 ]
@@ -103,7 +103,7 @@ export const outfits: Outfit[] = [
 
 export const banners: Banner[] = [
   { id: 'b-new', title: 'Yangi kolleksiya', subtitle: "Eng so'nggi qo'shilgan modellar", to: '/katalog?f=new', tone: 'coral' },
-  { id: 'b-original', title: 'AYNIMO Original', subtitle: "Faqat bizning mahsulotlar", to: '/katalog?f=original', tone: 'navy' },
+  { id: 'b-original', title: 'ANGAR Original', subtitle: "Faqat bizning mahsulotlar", to: '/katalog?f=original', tone: 'navy' },
   { id: 'b-sale', title: 'Chegirmadagi mahsulotlar', subtitle: 'Narxi pasaytirilgan modellar', to: '/katalog?f=discount', tone: 'beige' },
 ]
 

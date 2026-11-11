@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AYNIMO - premium fashion Telegram Mini App",
+  "description": "ANGAR - premium fashion Telegram Mini App",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

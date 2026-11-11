@@ -173,7 +173,7 @@ async function waitFor(url, ms = 15000) {
     check(/YUBORILMADI/.test(body), 'confirmation says the order was NOT sent to the shop')
     check(await page.getByTestId('draft-badge').first().isVisible(), '"Yuborilmagan" badge visible')
     check(!/qabul qilindi|tasdiqlandi|muvaffaqiyatli|rahmat|yuborildi|buyurtmangiz qabul/i.test(body), 'confirmation never claims success/receipt')
-    check(/AYNIMO buyurtma raqami emas/.test(body), 'reference is explained as NOT an official order number')
+    check(/ANGAR buyurtma raqami emas/.test(body), 'reference is explained as NOT an official order number')
     eq((await page.getByTestId('order-ref').innerText()).trim(), o1.ref, 'reference shown')
     check(/Yumshoq xudi/.test(body) && /Marjon/.test(body) && /Ali Valiyev/.test(body) && /\+998 ?901234567|\+998901234567/.test(body), 'confirmation lists product, variant and customer')
     check((await page.getByTestId('order-total').innerText()).includes('1 080 000'), 'confirmation total')

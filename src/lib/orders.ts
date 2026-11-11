@@ -6,7 +6,7 @@ import { validateContact, type Contact, type ContactErrors, type ContactInput } 
 
 /**
  * An `Order` is either
- *   sync 'server'     - stored by the AYNIMO backend (id + orderNumber come from the server), or
+ *   sync 'server'     - stored by the ANGAR backend (id + orderNumber come from the server), or
  *   sync 'local_only' - a DRAFT kept on this device only (demo mode, no backend configured). The shop has NOT received it.
  * Only orders read back from the server may ever be marked 'server'; anything read from local storage is forced to 'local_only'.
  */
@@ -29,7 +29,7 @@ export interface OrderItem {
 export interface Order {
   /** idempotency key of the submit attempt */
   id: string
-  /** local reference shown to the customer. NOT an official AYNIMO order number. */
+  /** local reference shown to the customer. NOT an official ANGAR order number. */
   ref: string
   source: 'quick' | 'cart'
   createdAt: string
@@ -40,7 +40,7 @@ export interface Order {
   deliveryPending: boolean
   total: number
   sync: 'local_only' | 'server'
-  /** official AYNIMO order number, only for sync 'server' */
+  /** official ANGAR order number, only for sync 'server' */
   orderNumber?: string
   status?: OrderStatus
   /** unverified Telegram id (display/prefill only, the backend will verify initData) */

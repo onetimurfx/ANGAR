@@ -1,7 +1,7 @@
-# AYNIMO — premium fashion Telegram Mini App
+# ANGAR — premium fashion Telegram Mini App
 
-AYNIMO runs **entirely inside Telegram** as a Mini App (no public website, no native apps).
-The customer presses START in the bot, taps "🛍 AYNIMO do'koniga kirish" and shops without leaving Telegram.
+ANGAR runs **entirely inside Telegram** as a Mini App (no public website, no native apps).
+The customer presses START in the bot, taps "🛍 ANGAR do'koniga kirish" and shops without leaving Telegram.
 
 **Stack:** React 19 · TypeScript · Vite · Tailwind CSS 4 · Framer Motion · Lucide · official Telegram WebApp API.
 Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiogram 3) bot. See [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -33,7 +33,7 @@ centre button with a lightning icon. There is no favorites / wishlist feature an
 ## Phase 3 features
 
 - **Filters** (bottom sheet, live result count, state kept in the URL so reload/back/share keep it): category, type
-  (new / discount / AYNIMO Original / other brands), brand (multi), size (multi), colour (multi), price range, availability.
+  (new / discount / ANGAR Original / other brands), brand (multi), size (multi), colour (multi), price range, availability.
   OR inside a group, AND across groups. Removable chips summarise active filters; unknown URL values are ignored safely.
 - **Sorting:** popularity, newest, lowest price, highest price.
 - **Product page:** swipeable 4-image gallery with synced thumbnails and a full-screen viewer (buttons, arrow keys, swipe),
@@ -104,3 +104,10 @@ Static hosts need an SPA fallback: the build copies `index.html` to `404.html` (
 
 `.github/workflows/deploy.yml` publishes `dist/` to GitHub Pages on every push to `main`
 (enable **Settings → Pages → Source: GitHub Actions** once). The URL is `https://<user>.github.io/AYNIMO/`.
+
+## Brand
+
+The brand is **ANGAR** (wordmark: lowercase "angar", yellow, bold rounded; `public/logo.svg`, favicon `public/favicon.svg`).
+The project started as AYNIMO; technical identifiers keep the old name on purpose so nothing already deployed breaks:
+repository and Pages path, `package.json` name, browser-storage keys `aynimo:*`, the `x-aynimo-session` header, the order-number
+prefix `AYN-`, Supabase `project_id`, Vault secret names `aynimo_*` and the cron job `aynimo-pickup-sweep`.

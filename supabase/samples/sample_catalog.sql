@@ -14,7 +14,7 @@ insert into public.categories (id, name, sort_order) values ('sweaters', 'Sviter
 insert into public.categories (id, name, sort_order) values ('outerwear', 'Ustki kiyim', 8) on conflict (id) do nothing;
 insert into public.categories (id, name, sort_order) values ('accessories', 'Aksessuarlar', 9) on conflict (id) do nothing;
 insert into public.categories (id, name, sort_order) values ('bags', 'Sumkalar', 10) on conflict (id) do nothing;
-insert into public.brands (id, name, type) values ('aynimo', 'AYNIMO Original', 'original') on conflict (id) do nothing;
+insert into public.brands (id, name, type) values ('aynimo', 'ANGAR Original', 'original') on conflict (id) do nothing;
 insert into public.brands (id, name, type) values ('sample-a', 'Namuna brend A', 'other') on conflict (id) do nothing;
 insert into public.brands (id, name, type) values ('sample-b', 'Namuna brend B', 'other') on conflict (id) do nothing;
 insert into public.products (id, name, brand_id, category_id, description, price, old_price, type, is_new, active, popularity, is_sample, created_at)
@@ -406,5 +406,5 @@ insert into public.collection_items (collection_id, product_id, sort_order) valu
 insert into public.collection_items (collection_id, product_id, sort_order) values ('o-light', 's-tee-1', 1) on conflict do nothing;
 insert into public.collection_items (collection_id, product_id, sort_order) values ('o-light', 's-sneaker-1', 2) on conflict do nothing;
 insert into public.promotions (title, subtitle, link, tone, sort_order) values ('Yangi kolleksiya', 'Eng so''nggi qo''shilgan modellar', '/katalog?f=new', 'coral', 0);
-insert into public.promotions (title, subtitle, link, tone, sort_order) values ('AYNIMO Original', 'Faqat bizning mahsulotlar', '/katalog?f=original', 'navy', 1);
+insert into public.promotions (title, subtitle, link, tone, sort_order) values ('ANGAR Original', 'Faqat bizning mahsulotlar', '/katalog?f=original', 'navy', 1);
 insert into public.promotions (title, subtitle, link, tone, sort_order) values ('Chegirmadagi mahsulotlar', 'Narxi pasaytirilgan modellar', '/katalog?f=discount', 'beige', 2);

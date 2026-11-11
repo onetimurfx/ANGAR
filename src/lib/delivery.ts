@@ -1,5 +1,5 @@
 /**
- * Delivery pricing. The real fee is business information AYNIMO has not given us, so by default it is
+ * Delivery pricing. The real fee is business information ANGAR has not given us, so by default it is
  * "not configured": the UI says the fee is not set yet and the total excludes delivery.
  *
  * Until the admin panel exists (Phase 6 will store this in the database) the values come from build-time

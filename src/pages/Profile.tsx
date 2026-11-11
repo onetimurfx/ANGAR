@@ -21,7 +21,7 @@ export function Profile() {
   const pickup = usePickup()
   const server = mode === 'server'
   const recent = useRecent().map(getProduct).filter((p) => p !== undefined)
-  const name = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'AYNIMO mijozi'
+  const name = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'ANGAR mijozi'
 
   return (
     <div className="pb-36">

@@ -1,4 +1,4 @@
-# AYNIMO backend setup (Supabase)
+# ANGAR backend setup (Supabase)
 
 The repository contains the complete backend (`supabase/`), but **no Supabase project has been created for you**.
 Follow these steps once. **Never paste secrets into chat, issues or code**: they go only into the places named below.
