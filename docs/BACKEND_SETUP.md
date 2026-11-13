@@ -29,7 +29,7 @@ Follow these steps once. **Never paste secrets into chat, issues or code**: they
 7. Bot messages: schedule `POST https://<ref>.supabase.co/functions/v1/notify-outbox` with header `x-cron-secret: <CRON_SECRET>`
    every minute (Supabase Cron / pg_cron) so failed notifications are retried. New orders also try to notify immediately.
 8. Delivery fee: it stays "not set" until you set `settings.delivery_fee` (UZS). The app never invents a price.
-9. Real products: insert into `categories`, `brands`, `products`, `product_variants`, `inventory` (Phase 6 adds the admin panel).
+9. Real products: insert into `categories`, `brands`, `products`, `product_variants`, `inventory` (or use the admin panel: docs/ADMIN_PANEL.md).
    Placeholder products must keep `is_sample = true`; they are shown as NAMUNA and cannot be ordered
    (`settings.allow_sample_orders` is false).
 
@@ -83,3 +83,7 @@ Quick Order is now store pickup only (own basket, own server tables, no address,
 `pickup-sweep`, updated `place-order`), 3. publish the new front-end, 4. install the cron (`supabase/ops/cron_pickup.sql`).
 The Phase 5 front-end still sends `'quick'`, so migration 7 must not go live before the new front-end does. Existing orders created
 with `source='quick'` stay readable.
+
+## Admin panel (Phase 6, stage E)
+
+See `docs/ADMIN_PANEL.md` (sections, security, deploy order) and `docs/ADMIN_API.md`. Order when going live: migration `…20261111000001`, Edge Function `admin-api`, front-end. Administrators are still added only in the SQL editor.

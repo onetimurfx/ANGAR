@@ -19,6 +19,7 @@ import { handler as placeHandler } from '../../supabase/functions/place-order/ha
 import { handler as outboxHandler } from '../../supabase/functions/notify-outbox/handler.ts'
 import { handler as pickupHandler } from '../../supabase/functions/pickup-order/handler.ts'
 import { handler as adminPickupHandler } from '../../supabase/functions/admin-pickup/handler.ts'
+import { handler as adminApiHandler } from '../../supabase/functions/admin-api/handler.ts'
 import { handler as sweepHandler } from '../../supabase/functions/pickup-sweep/handler.ts'
 
 export const BOT_TOKEN = '7000000001:AAFakeTokenForE2eOnly_abcdefghijklmnopqrstu'
@@ -55,12 +56,23 @@ await product('GONE', 'Yashirin mahsulot', 'b1', 'hoodies', 10000, { active: fal
 await variant('GONE', 'M', 'Qora', '#222222', 5)
 await product('SMP', 'Namuna Futbolka', 'b1', 'hoodies', 50000, { sample: true })
 await variant('SMP', 'M', 'Qora', '#222222', 5)
-await sql`insert into administrators (telegram_id, name, role) values (900001, 'Admin', 'owner')`
+await sql`insert into administrators (telegram_id, name, role) values (900001, 'Admin', 'owner'), (900002, 'Menejer', 'manager')`
 
 // ----------------------------------------------------------------- Telegram Bot API (fake) + fault injection
 const telegram: { chat_id: number; text: string }[] = []
 const inject = { fail: 0 }
+const storageLog: { op: string; path: string }[] = []
 const fakeFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const target = String(input)
+  if (target.includes('/storage/v1/object/upload/sign/product-images/')) {
+    const path = target.split('/product-images/')[1]
+    storageLog.push({ op: 'sign', path })
+    return new Response(JSON.stringify({ url: `/object/upload/sign/product-images/${path}?token=e2e-token` }), { status: 200 })
+  }
+  if (init?.method === 'DELETE' && target.includes('/storage/v1/object/product-images/')) {
+    storageLog.push({ op: 'delete', path: target.split('/product-images/')[1] })
+    return new Response('{}', { status: 200 })
+  }
   const body = init?.body ? JSON.parse(String(init.body)) : {}
   telegram.push({ chat_id: body.chat_id, text: body.text })
   return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
@@ -68,7 +80,7 @@ const fakeFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 const pending: Promise<unknown>[] = []
 const deps = (): Deps => ({
   sql: sql as unknown as Deps['sql'],
-  env: { BOT_TOKEN, SESSION_SECRET, ALLOWED_ORIGINS: ORIGIN, CRON_SECRET: 'e2e-cron-secret-0123456789' },
+  env: { BOT_TOKEN, SESSION_SECRET, ALLOWED_ORIGINS: ORIGIN, CRON_SECRET: 'e2e-cron-secret-0123456789', SUPABASE_URL: `http://127.0.0.1:${API_PORT}`, SUPABASE_SERVICE_ROLE_KEY: 'e2e-service-role-SECRET-0123456789-abcdefghij' },
   fetch: fakeFetch,
   now: () => Date.now(),
   background: (p) => void pending.push(p),
@@ -76,7 +88,7 @@ const deps = (): Deps => ({
 })
 const FUNCTIONS: Record<string, (d: Deps) => (r: Request) => Promise<Response>> = {
   'telegram-auth': authHandler, 'admin-whoami': adminHandler, cart: cartHandler, 'my-orders': ordersHandler, 'place-order': placeHandler, 'notify-outbox': outboxHandler,
-  'pickup-order': pickupHandler, 'admin-pickup': adminPickupHandler, 'pickup-sweep': sweepHandler,
+  'pickup-order': pickupHandler, 'admin-pickup': adminPickupHandler, 'pickup-sweep': sweepHandler, 'admin-api': adminApiHandler,
 }
 
 const readBody = (req: IncomingMessage) => new Promise<Buffer>((res) => { const c: Buffer[] = []; req.on('data', (d) => c.push(d)); req.on('end', () => res(Buffer.concat(c))) })
@@ -95,6 +107,17 @@ const api = createServer(async (req, res) => {
       if (!req.headers.apikey) return send(res, 401, { message: 'No API key' }, cors)
       const cat = await asRole(sql, 'anon', async (tx) => (await tx`select public.get_catalog() as c`)[0].c)
       return send(res, 200, cat, cors)
+    }
+
+    // fake Storage: signed uploads accepted, public photos answered with a 1x1 PNG
+    if (url.pathname.startsWith('/storage/v1/object/upload/sign/product-images/') && req.method === 'PUT') {
+      await readBody(req)
+      storageLog.push({ op: 'put', path: url.pathname.split('/product-images/')[1] })
+      return send(res, url.searchParams.get('token') === 'e2e-token' ? 200 : 401, { Key: 'ok' }, cors)
+    }
+    if (url.pathname.startsWith('/storage/v1/object/public/product-images/')) {
+      res.writeHead(200, { 'content-type': 'image/png', ...cors })
+      return void res.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'))
     }
 
     if (url.pathname.startsWith('/functions/v1/')) {
@@ -127,6 +150,34 @@ const api = createServer(async (req, res) => {
         const reservations = await sql`select status, qty from stock_reservations order by created_at`
         return send(res, 200, { orders, stock, cart, telegram, outbox, pickup, reservations, customers: (await sql`select count(*)::int n from customers`)[0].n }, cors)
       }
+      if (op === 'admin-state') {
+        return send(res, 200, {
+          orders: await sql`select id, order_number, status, total, delivery_fee, delivery_pending from orders order by created_at`,
+          products: await sql`select id, name, price, active, brand_id, category_id from products order by created_at`,
+          stock: await sql`select p.product_id, p.size, p.color_name, i.quantity from product_variants p join inventory i on i.variant_id = p.id order by 1, 2, 3`,
+          images: await sql`select product_id, path from product_images order by sort_order`,
+          categories: await sql`select id, name, active from categories order by sort_order, name`,
+          audit: await sql`select action, admin_telegram_id::int as admin from admin_audit_log order by id`,
+          settings: (await sql`select delivery_fee, delivery_free_from from settings`)[0],
+          pickupSettings: (await sql`select store_address, pending_timeout_minutes from pickup_settings`)[0],
+          pickup: await sql`select id, order_number, status, total, pickup_code from pickup_orders order by created_at`,
+          admins: await sql`select telegram_id::int as tg, role, active from administrators order by telegram_id`,
+          telegram, storage: storageLog,
+        }, cors)
+      }
+      if (op === 'seed-cart-order') {
+        const tg = Number(q('tg') || 700001)
+        const [c] = await sql`select public.upsert_customer(${tg}::bigint, 'Ali', 'Valiyev', ${'u' + tg}, null, 'uz') as id`
+        const [r] = await sql`select public.place_order(${c.id}::uuid, gen_random_uuid(), 'cart', 'Ali Valiyev', '+998901234567', 'Toshkent, Chilonzor 9', 'Ertalab', ${sql.json([{ productId: q('product') || 'P1', size: q('size') || 'M', color: q('color') || 'Qora', qty: Number(q('qty') || 1) }] as never)}) as r`
+        return send(res, 200, r.r, cors)
+      }
+      if (op === 'seed-pickup-order') {
+        const tg = Number(q('tg') || 700001)
+        const [c] = await sql`select public.upsert_customer(${tg}::bigint, 'Ali', 'Valiyev', ${'u' + tg}, null, 'uz') as id`
+        const [r] = await sql`select public.place_pickup_order(${c.id}::uuid, gen_random_uuid(), 'Ali Valiyev', '+998901234567', null, ${sql.json([{ productId: q('product') || 'P2', size: q('size') || '42', color: q('color') || 'Oq', qty: Number(q('qty') || 1) }] as never)}) as r`
+        return send(res, 200, r.r, cors)
+      }
+      if (op === 'reset-admin') { await sql`truncate orders, cart_items, notification_outbox, pickup_orders, pickup_outbox, admin_audit_log, stock_adjustments restart identity cascade`; telegram.length = 0; storageLog.length = 0; return send(res, 200, { ok: true }, cors) }
       if (op === 'set-stock') { await sql`update inventory set quantity = ${Number(q('qty'))} where variant_id = (select id from product_variants where product_id = ${q('product')} and size = ${q('size')} and color_name = ${q('color')})`; return send(res, 200, { ok: true }, cors) }
       if (op === 'delivery') { await sql`update settings set delivery_fee = ${q('fee') === '' ? null : Number(q('fee'))}, delivery_free_from = ${q('free') === '' ? null : Number(q('free'))}`; return send(res, 200, { ok: true }, cors) }
       if (op === 'allow-samples') { await sql`update settings set allow_sample_orders = ${q('on') === '1'}`; return send(res, 200, { ok: true }, cors) }

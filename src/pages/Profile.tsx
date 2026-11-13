@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ChevronRight, Headset, PackageOpen, UserRound } from 'lucide-react'
+import { ChevronRight, Headset, PackageOpen, ShieldCheck, UserRound } from 'lucide-react'
 import { PageHeader, Section } from '../components/ui'
 import { ProductRail } from '../components/ProductCard'
 import { getProduct, settings } from '../data/catalog'
@@ -16,7 +16,7 @@ import { t } from '../i18n'
 export function Profile() {
   const user = getTelegramUser()
   useCatalogVersion()
-  const { mode, auth } = useBackend()
+  const { mode, auth, isAdmin } = useBackend()
   const { orders, status, refresh } = useOrders()
   const pickup = usePickup()
   const server = mode === 'server'
@@ -41,6 +41,15 @@ export function Profile() {
           </div>
         </div>
         <p className="mt-2 px-1 text-[12px] text-stone">{server && auth === 'ok' ? t('profile.tgVerified') : isInTelegram() ? t('profile.tgNote') : t('profile.preview')}</p>
+
+        {/* UI hint only: the server checks admin rights on every admin call */}
+        {isAdmin && (
+          <Link to="/admin" data-testid="admin-link" className="glass mt-4 flex items-center gap-3 rounded-2xl px-4 py-3.5 active:scale-[0.99]">
+            <span className="grid size-10 place-items-center rounded-full bg-coral-soft text-coral"><ShieldCheck className="size-5" /></span>
+            <span className="min-w-0 flex-1 text-[14px] font-bold">Admin panel</span>
+            <ChevronRight className="size-4 text-stone" />
+          </Link>
+        )}
 
         <h2 className="mb-2 mt-7 text-xl">{t('profile.pickupTitle')}</h2>
         <section data-testid="pickup-history">

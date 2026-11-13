@@ -81,6 +81,17 @@ export interface PickupPlaceRequest {
   items: CartItem[]
 }
 
+export type AdminParams = Record<string, string | number | boolean | null | undefined>
+
+function adminQuery(params: AdminParams): string {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === '') continue
+    qs.set(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v))
+  }
+  return qs.toString()
+}
+
 export interface BackendOptions {
   url: string
   anonKey: string
@@ -97,6 +108,8 @@ export function createBackend(o: BackendOptions) {
   const timeoutMs = o.timeoutMs ?? 15000
   const initData = o.initData ?? (() => getWebApp()?.initData ?? '')
   let session: { token: string; expiresAt: number } | null = null
+  /** UI HINT ONLY (shows the "Admin panel" link). The server decides on every admin call. */
+  let adminHint = false
   let pendingLogin: Promise<string> | null = null
 
   async function request(path: string, init: RequestInit, extra: Record<string, string> = {}): Promise<unknown> {
@@ -132,8 +145,9 @@ export function createBackend(o: BackendOptions) {
     pendingLogin ??= (async () => {
       const data = initData()
       if (!data) throw new BackendError('not_in_telegram', 'NOT_IN_TELEGRAM')
-      const r = (await request('/functions/v1/telegram-auth', { method: 'POST', body: JSON.stringify({ initData: data }) })) as { token?: unknown; expiresAt?: unknown }
+      const r = (await request('/functions/v1/telegram-auth', { method: 'POST', body: JSON.stringify({ initData: data }) })) as { token?: unknown; expiresAt?: unknown; isAdmin?: unknown }
       if (typeof r.token !== 'string') throw new BackendError('server', 'BAD_RESPONSE')
+      adminHint = r.isAdmin === true
       session = { token: r.token, expiresAt: typeof r.expiresAt === 'number' ? r.expiresAt : now() + 50 * 60_000 }
       return r.token
     })().finally(() => (pendingLogin = null))
@@ -197,6 +211,36 @@ export function createBackend(o: BackendOptions) {
     pickupCancel: async (id: string): Promise<unknown> => {
       const r = await call('pickup-order', 'POST', { action: 'cancel', id })
       return r.order
+    },
+    // ---- Admin panel (stage E). Authority is the server (requireAdmin on every call); nothing here grants anything.
+    isAdminHint: () => adminHint,
+    /** GET admin-api?r=<resource>&...  (booleans become 1/0, empty values are dropped) */
+    adminGet: (resource: string, params: AdminParams = {}): Promise<Record<string, unknown>> => call(`admin-api?${adminQuery({ ...params, r: resource })}`, 'GET'),
+    /** POST admin-api { ...body, r: resource } (the resource can never be overridden by the body) */
+    adminPost: (resource: string, body: Record<string, unknown> = {}): Promise<Record<string, unknown>> => call('admin-api', 'POST', { ...body, r: resource }),
+    /** the existing stage-D function: GET admin-pickup?group=...|id=...|view=health */
+    adminPickupGet: (params: AdminParams = {}): Promise<Record<string, unknown>> => call(`admin-pickup${Object.keys(params).length ? `?${adminQuery(params)}` : ''}`, 'GET'),
+    adminPickupPost: (body: Record<string, unknown>): Promise<Record<string, unknown>> => call('admin-pickup', 'POST', body),
+    /**
+     * Uploads a photo to the SIGNED Storage URL that admin-api issued. It is a plain PUT with FormData (what supabase-js
+     * uploadToSignedUrl does): no apikey, no session header, so nothing secret goes to Storage.
+     */
+    adminUpload: async (uploadUrl: string, file: Blob): Promise<void> => {
+      if (!/^https?:\/\/[^\s/]+\/storage\/v1\/object\/upload\/sign\/product-images\//.test(uploadUrl)) throw new BackendError('invalid', 'BAD_UPLOAD_URL')
+      const fd = new FormData()
+      fd.append('cacheControl', '3600')
+      fd.append('', file)
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 60_000)
+      let res: Response
+      try {
+        res = await doFetch(uploadUrl, { method: 'PUT', body: fd, signal: ctrl.signal })
+      } catch (e) {
+        throw (e as { name?: string })?.name === 'AbortError' ? new BackendError('timeout', 'TIMEOUT') : new BackendError('offline', 'NETWORK')
+      } finally {
+        clearTimeout(timer)
+      }
+      if (!res.ok) throw new BackendError(res.status === 413 || res.status === 415 ? 'invalid' : 'server', 'UPLOAD_FAILED', {}, res.status)
     },
   }
 }

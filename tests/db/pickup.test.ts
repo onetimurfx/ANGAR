@@ -696,7 +696,8 @@ describe('admin list', () => {
 })
 
 describe('pre-flight 5: rollback script is safe', () => {
-  const script = () => readFileSync(resolve('supabase/rollback/20261109_pickup_rollback.sql'), 'utf8')
+  // stage E (admin panel) sits on top of D: its own rollback runs first
+  const script = () => readFileSync(resolve('supabase/rollback/20261111_admin_rollback.sql'), 'utf8') + '\n' + readFileSync(resolve('supabase/rollback/20261109_pickup_rollback.sql'), 'utf8')
 
   it('REFUSES while pickup data exists and changes nothing', async () => {
     const t = await newTestDb('rb_refuse')

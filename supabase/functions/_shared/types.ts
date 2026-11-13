@@ -10,6 +10,9 @@ export interface Env {
   ALLOWED_ORIGINS?: string
   /** Shared secret for the notify-outbox retry endpoint (called by a scheduler). */
   CRON_SECRET?: string
+  /** Injected by Supabase. With the service-role key it is used ONLY by the server to sign Storage uploads. */
+  SUPABASE_URL?: string
+  SUPABASE_SERVICE_ROLE_KEY?: string
 }
 
 export interface Deps {

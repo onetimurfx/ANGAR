@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
@@ -23,6 +23,7 @@ import { ToastProvider } from './lib/toast'
 import { Compass } from 'lucide-react'
 import { t } from './i18n'
 
+const AdminApp = lazy(() => import('./admin/AdminApp'))
 const ROOTS = new Set(['/', '/katalog', '/tezkor-buyurtma', '/savatcha', '/profil'])
 
 function NotFound() {
@@ -53,6 +54,15 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
+
+  // The admin panel is its own bundle (loaded on demand) and does not use the shop's carts, dock or animation wrapper.
+  if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
+    return (
+      <Suspense fallback={<div className="grid min-h-[var(--app-height)] place-items-center text-sm text-stone">…</div>}>
+        <AdminApp />
+      </Suspense>
+    )
+  }
 
   return (
     <CartProvider>

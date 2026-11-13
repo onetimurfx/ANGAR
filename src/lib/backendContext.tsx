@@ -17,9 +17,11 @@ interface Ctx {
   reload: () => Promise<void>
   /** tries to sign in again (e.g. after a network error) */
   signIn: () => Promise<boolean>
+  /** UI hint only (the Profile link to the admin panel). The server re-checks admin rights on every admin call. */
+  isAdmin: boolean
 }
 
-const BackendCtx = createContext<Ctx>({ mode: 'demo', auth: 'none', version: 0, reload: async () => {}, signIn: async () => false })
+const BackendCtx = createContext<Ctx>({ mode: 'demo', auth: 'none', version: 0, reload: async () => {}, signIn: async () => false, isAdmin: false })
 export const useBackend = () => useContext(BackendCtx)
 /** Call in a screen that must re-render when the catalog is refreshed. */
 export const useCatalogVersion = () => useContext(BackendCtx).version
@@ -112,7 +114,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [reload])
 
-  const value = useMemo<Ctx>(() => ({ mode: backend ? 'server' : 'demo', auth, version, reload, signIn }), [auth, version, reload, signIn])
+  const value = useMemo<Ctx>(() => ({ mode: backend ? 'server' : 'demo', auth, version, reload, signIn, isAdmin: auth === 'ok' && backend?.isAdminHint() === true }), [auth, version, reload, signIn])
 
   if (state === 'loading') {
     return (

@@ -20,3 +20,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.pickup-sweep]
 verify_jwt = false
+[functions.admin-api]
+verify_jwt = false

@@ -15,7 +15,7 @@ Planned backend: Supabase (Postgres, Storage, Edge Functions) and a Python (aiog
 | 3 | Catalog filters/sorting, product details, cart state | done |
 | 4 | Quick Order, cart, checkout (device-only drafts) | done |
 | 5 | Supabase backend (schema, RLS, Edge Functions, live catalog/cart/orders) | done in code; **your Supabase project must still be created** - see [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md) |
-| 6 | Admin dashboard, orders | planned |
+| 6 | Admin panel (`/admin`): dashboard, Cart orders, pickup, products, categories, stock, customers, settings | implemented (not deployed) — see docs/ADMIN_PANEL.md |
 | 7 | Telegram bot | planned |
 | 8 | Security, testing | planned |
 | 9 | Deployment, Mini App configuration | planned |

@@ -19,6 +19,8 @@ export function makeDeps(): Deps {
       SESSION_SECRET: Deno.env.get('SESSION_SECRET'),
       ALLOWED_ORIGINS: Deno.env.get('ALLOWED_ORIGINS'),
       CRON_SECRET: Deno.env.get('CRON_SECRET'),
+      SUPABASE_URL: Deno.env.get('SUPABASE_URL'),
+      SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
     },
     fetch: (...a) => fetch(...a),
     now: () => Date.now(),
